@@ -1,2 +1,7 @@
 [build]
   publish = "."
+
+[[redirects]]
+  from = "/"
+  to = "/jf_heatmap.html"
+  status = 200
