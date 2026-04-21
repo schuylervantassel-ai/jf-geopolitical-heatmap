@@ -28,6 +28,12 @@ import requests
 import feedparser
 from bs4 import BeautifulSoup
 
+try:
+    import cloudscraper as _cloudscraper
+    _HAS_CLOUDSCRAPER = True
+except ImportError:
+    _HAS_CLOUDSCRAPER = False
+
 # ── Configuration ──────────────────────────────────────────────────────────────
 
 DAYS = 90
@@ -438,11 +444,14 @@ def fetch_articles(pub_id: str, feed_url: str, days: int = 90) -> list[dict]:
     articles = []
     page = 1
 
-    session = requests.Session()
+    if _HAS_CLOUDSCRAPER:
+        session = _cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+    else:
+        session = requests.Session()
     session.headers.update(HEADERS)
 
     while page <= 50:
-        url = f"{feed_url}?paged={page}"
+        url = feed_url if page == 1 else f"{feed_url}?paged={page}"
         resp = None
         for attempt in range(3):
             try:
