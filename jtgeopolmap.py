@@ -73,7 +73,6 @@ PUBLICATIONS = {
         "short":    "EDM",
         "feed":     "https://jamestown.org/publications/edm/feed/",
         "url":      "https://jamestown.org/publications/edm/",
-        # Hex accent colour (taken from jamestown.org EDM nav/header)
         "accent":   "#2563eb",
         "colorscale": [
             [0.00, "#061d3c"],
@@ -124,6 +123,7 @@ PUBLICATIONS = {
         ],
     },
 }
+
 
 # ── Country keyword → ISO-3166 alpha-3 mapping ────────────────────────────────
 
