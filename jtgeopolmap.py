@@ -29,6 +29,12 @@ import feedparser
 from bs4 import BeautifulSoup
 
 try:
+    from curl_cffi import requests as _curl_requests
+    _HAS_CURL_CFFI = True
+except ImportError:
+    _HAS_CURL_CFFI = False
+
+try:
     import cloudscraper as _cloudscraper
     _HAS_CLOUDSCRAPER = True
 except ImportError:
@@ -444,7 +450,9 @@ def fetch_articles(pub_id: str, feed_url: str, days: int = 90) -> list[dict]:
     articles = []
     page = 1
 
-    if _HAS_CLOUDSCRAPER:
+    if _HAS_CURL_CFFI:
+        session = _curl_requests.Session(impersonate="chrome120")
+    elif _HAS_CLOUDSCRAPER:
         session = _cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
     else:
         session = requests.Session()

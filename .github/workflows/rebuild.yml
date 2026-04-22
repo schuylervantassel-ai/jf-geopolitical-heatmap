@@ -1,0 +1,46 @@
+name: Rebuild heatmap
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests feedparser beautifulsoup4 curl_cffi
+
+      - name: Rebuild heatmap
+        run: python jtgeopolmap.py
+
+      - name: Commit updated heatmap if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add jf_heatmap.html
+          if git diff --cached --quiet; then
+            echo "No changes to jf_heatmap.html — skipping commit and deploy."
+            echo "CHANGED=false" >> "$GITHUB_ENV"
+          else
+            git commit -m "chore: rebuild jf_heatmap.html [skip ci]"
+            git push
+            echo "CHANGED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Trigger Netlify deploy
+        if: env.CHANGED == 'true'
+        run: curl -s -X POST "${{ secrets.NETLIFY_DEPLOY_HOOK }}"
