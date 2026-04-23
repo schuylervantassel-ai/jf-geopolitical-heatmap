@@ -476,20 +476,10 @@ def fetch_articles(pub_id: str, feed_url: str, days: int = 90) -> list[dict]:
                 if attempt == 2:
                     print(f"    Warning: page {page} failed ({exc}), stopping.")
         if resp is None or not resp.ok:
-            status = resp.status_code if resp is not None else "no response"
-            print(f"    [DIAG] page {page} skipped — status={status}, url={url}")
             break
 
-        print(f"    [DIAG] page {page} HTTP {resp.status_code} url={url}")
-        print(f"    [DIAG] resp.text[:200] = {resp.text[:200]!r}")
-
         feed = feedparser.parse(resp.text)
-        print(f"    [DIAG] feedparser entries={len(feed.entries)}, bozo={feed.bozo}"
-              + (f", bozo_exception={feed.bozo_exception}" if feed.bozo else ""))
-        if feed.entries:
-            print(f"    [DIAG] first entry title={feed.entries[0].get('title','<no title>')!r}")
         if not feed.entries:
-            print(f"    [DIAG] no entries on page {page} — stopping pagination")
             break
 
         reached_cutoff = False
@@ -522,7 +512,6 @@ def fetch_articles(pub_id: str, feed_url: str, days: int = 90) -> list[dict]:
             break
         page += 1
 
-    print(f"  [{pub_id}] fetched {len(articles)} articles total")
     return articles
 
 
@@ -2628,7 +2617,6 @@ def build_output() -> str:
                 articles.append(a)
         articles.sort(key=lambda x: x["date"], reverse=True)
         country_data = build_country_data(articles)
-        print(f"  [{pid}] country_data has {len(country_data)} countries")
         all_data[pid] = {"articles": articles, "country_data": country_data}
 
     # aggregate "all" publication

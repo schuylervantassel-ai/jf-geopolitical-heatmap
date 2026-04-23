@@ -24,13 +24,6 @@ jobs:
       - name: Install dependencies
         run: pip install requests feedparser beautifulsoup4 curl_cffi
 
-      - name: Test feed reachability
-        run: |
-          curl -v -L --max-time 15 \
-            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" \
-            "https://jamestown.org/publications/edm/feed/" \
-            | head -c 500
-
       - name: Rebuild heatmap
         run: python -u jtgeopolmap.py
         env:
