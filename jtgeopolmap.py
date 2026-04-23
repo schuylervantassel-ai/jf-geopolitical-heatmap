@@ -458,8 +458,12 @@ def fetch_articles(pub_id: str, feed_url: str, days: int = 90) -> list[dict]:
         session = requests.Session()
     session.headers.update(HEADERS)
 
+    cache_bust = int(time.time())
     while page <= 50:
-        url = feed_url if page == 1 else f"{feed_url}?paged={page}"
+        if page == 1:
+            url = f"{feed_url}?_={cache_bust}"
+        else:
+            url = f"{feed_url}?paged={page}&_={cache_bust}"
         resp = None
         for attempt in range(3):
             try:
@@ -468,7 +472,7 @@ def fetch_articles(pub_id: str, feed_url: str, days: int = 90) -> list[dict]:
                 resp = session.get(url, timeout=25)
                 resp.raise_for_status()
                 break
-            except requests.RequestException as exc:
+            except Exception as exc:
                 if attempt == 2:
                     print(f"    Warning: page {page} failed ({exc}), stopping.")
         if resp is None or not resp.ok:
