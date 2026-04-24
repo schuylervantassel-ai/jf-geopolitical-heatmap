@@ -24,6 +24,17 @@ jobs:
       - name: Install dependencies
         run: pip install requests feedparser beautifulsoup4 curl_cffi
 
+      - name: Test EDM feed reachability
+        run: |
+          curl -s -o /tmp/feed_test.txt -w "HTTP_STATUS:%{http_code}" \
+            -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+            -L --max-time 30 \
+            "https://jamestown.org/publications/edm/feed/"
+          echo "--- First 800 chars of response ---"
+          head -c 800 /tmp/feed_test.txt
+          echo ""
+
       - name: Rebuild heatmap
         run: python -u jtgeopolmap.py
         env:
