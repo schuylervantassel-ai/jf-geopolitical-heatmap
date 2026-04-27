@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'jf_heatmap.html'
   workflow_dispatch:
 
 jobs:
@@ -49,6 +51,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to jf_heatmap.html — skipping commit."
           else
-            git commit -m "chore: rebuild jf_heatmap.html [skip ci]"
+            git commit -m "chore: rebuild jf_heatmap.html"
             git push
           fi
