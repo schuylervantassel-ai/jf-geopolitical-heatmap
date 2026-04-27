@@ -1337,6 +1337,14 @@ def build_html(all_data: dict, days: int) -> str:
       Help
     </button>
   </span>
+  <span style="margin-left:8px;">
+    <button id="autorefresh-btn" onclick="toggleAutoRefresh()"
+      style="background:none;border:none;padding:0;color:#484f58;
+             font-size:0.68rem;cursor:pointer;
+             font-family:'Literata',Georgia,serif;">
+      Auto-refresh: Off
+    </button>
+  </span>
 </div>
 
 <script>
@@ -2519,6 +2527,61 @@ switchPub('all');
   }}
   ctx.putImageData(img, 0, 0);
   el.style.backgroundImage = 'url(' + c.toDataURL() + ')';
+}})();
+
+// ── Auto-refresh ─────────────────────────────────────────────────────────────
+(function() {{
+  const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+  const LS_KEY = 'jf_autorefresh';
+  let refreshTimer = null;
+  let countdownInterval = null;
+  let reloadAt = null;
+
+  function fmt(ms) {{
+    const totalSec = Math.max(0, Math.round(ms / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }}
+
+  function updateBtn() {{
+    const btn = document.getElementById('autorefresh-btn');
+    if (!btn) return;
+    if (refreshTimer) {{
+      const remaining = reloadAt - Date.now();
+      btn.textContent = 'Auto-refresh: ' + fmt(remaining);
+      btn.style.color = '#3fb950';
+    }} else {{
+      btn.textContent = 'Auto-refresh: Off';
+      btn.style.color = '#484f58';
+    }}
+  }}
+
+  function startAutoRefresh() {{
+    reloadAt = Date.now() + INTERVAL_MS;
+    refreshTimer = setTimeout(() => location.reload(), INTERVAL_MS);
+    countdownInterval = setInterval(updateBtn, 1000);
+    localStorage.setItem(LS_KEY, '1');
+    updateBtn();
+  }}
+
+  function stopAutoRefresh() {{
+    clearTimeout(refreshTimer);
+    clearInterval(countdownInterval);
+    refreshTimer = null;
+    countdownInterval = null;
+    reloadAt = null;
+    localStorage.removeItem(LS_KEY);
+    updateBtn();
+  }}
+
+  window.toggleAutoRefresh = function() {{
+    if (refreshTimer) {{ stopAutoRefresh(); }} else {{ startAutoRefresh(); }}
+  }};
+
+  if (localStorage.getItem(LS_KEY)) {{
+    startAutoRefresh();
+  }}
 }})();
 
 </script>
