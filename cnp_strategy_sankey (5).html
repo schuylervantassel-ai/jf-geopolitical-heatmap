@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNP Strategy Dependency Flow — Jamestown Foundation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --p: #00ff9d;
+    --p2: #00cc7a;
+    --amber: #ffb300;
+    --red: #ff4040;
+    --bg: #04080a;
+    --bg2: #070d0f;
+    --node-fill: #04080a;
+    --scan-opacity: 1;
+    --vignette-opacity: 1;
+    --font: 'Share Tech Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  body {
+    font-family: var(--font);
+    color: var(--p);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* scanlines overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 3px,
+      rgba(0,0,0,0.055) 3px, rgba(0,0,0,0.055) 4px
+    );
+    opacity: var(--scan-opacity);
+  }
+
+  /* vignette overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99;
+    background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.6) 100%);
+    opacity: var(--vignette-opacity);
+  }
+
+  /* ── HEADER ── */
+  .hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid #163d28;
+    background: var(--bg2);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .hdr-title {
+    font-size: 15px; letter-spacing: .18em; color: var(--p); opacity: .92;
+    cursor: help; display: inline-block;
+    border-bottom: 1px dotted rgba(0,255,157,0.22);
+    transition: opacity .15s;
+  }
+  .hdr-title:hover { opacity: 1; }
+
+  /* ── CNP DEFINITION CARD ── */
+  #cnp-def {
+    position: fixed;
+    z-index: 210;
+    top: 46px; left: 20px;
+    width: 340px;
+    background: rgba(4,8,10,0.98);
+    border: 1px solid #2e7050;
+    border-top: 2px solid var(--p);
+    padding: 14px 16px;
+    font-family: var(--font);
+    font-size: 12px;
+    letter-spacing: .07em;
+    line-height: 1.85;
+    color: #4a8060;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 24px rgba(0,255,157,0.05);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+    border-radius: 0 0 3px 3px;
+  }
+  #cnp-def.vis { opacity: 1; }
+  #cnp-def .cd-head  { font-size: 11px; color: var(--p); letter-spacing: .18em; margin-bottom: 10px; opacity: .75; }
+  #cnp-def .cd-term  { color: var(--p); font-size: 13px; letter-spacing: .08em; margin-bottom: 8px; }
+  #cnp-def .cd-body  { color: #3a6a50; line-height: 1.9; }
+  #cnp-def .cd-cite  { font-size: 10px; color: #2a6248; margin-top: 10px; padding-top: 8px;
+                        border-top: 1px solid #102c1e; letter-spacing: .06em; }
+  #cnp-def .cd-cite a {
+    color: var(--p2);
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(0,255,157,0.35);
+    margin-right: 10px;
+  }
+  #cnp-def .cd-cite a:hover { color: var(--p); }
+  .hdr-sub   { font-size: 11px;  letter-spacing: .12em; color: #2e7050; margin-top: 2px; }
+  .hdr-r     { display: flex; gap: 18px; align-items: center; }
+  .ldot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 8px var(--red);
+    animation: pu 1.4s ease-in-out infinite; display: inline-block;
+  }
+  @keyframes pu { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .clk { font-size: 12px; letter-spacing: .14em; color: #3e7860; }
+  .hdr-stat { font-size: 11px; color: #2e7050; }
+  .hdr-stat span { color: var(--p); }
+  .snd-btn {
+    font-size: 11px; letter-spacing: .13em; color: #2a6248;
+    background: none; border: 1px solid #163d28; padding: 3px 8px;
+    cursor: pointer; font-family: var(--font); border-radius: 2px;
+    transition: color .2s, border-color .2s, box-shadow .2s;
+    min-width: 96px; text-align: center;
+  }
+  .snd-btn:hover          { color: #2a6048; border-color: #2a6248; }
+  .snd-btn.vol-low        { color: #3a7058; border-color: #2e7050; }
+  .snd-btn.vol-med        { color: var(--p2); border-color: #1a5030; }
+  .snd-btn.vol-high       { color: var(--p); border-color: #00cc7a;
+                             box-shadow: 0 0 6px rgba(0,255,157,0.18); }
+  .theme-btn {
+    font-size: 11px; letter-spacing: .12em; color: #2a6248;
+    background: none; border: 1px solid #163d28; padding: 3px 8px;
+    cursor: pointer; font-family: var(--font); border-radius: 2px;
+    transition: color .2s, border-color .2s;
+    min-width: 120px; text-align: center;
+  }
+  .theme-btn:hover { color: var(--p); border-color: var(--p2); }
+
+  body.theme-glass {
+    --p: #7bf7ff;
+    --p2: #4bd5df;
+    --bg: #08131a;
+    --bg2: #0d1c25;
+    --node-fill: #0b1820;
+    --scan-opacity: 0.35;
+    --vignette-opacity: 0.5;
+  }
+  body.theme-glass .hdr,
+  body.theme-glass .side,
+  body.theme-glass .btm,
+  body.theme-glass #cnp-def,
+  body.theme-glass #tip {
+    backdrop-filter: blur(6px);
+    background: rgba(10, 22, 30, 0.78);
+  }
+
+  body.theme-policy {
+    --p: #123a5c;
+    --p2: #245b86;
+    --bg: #eef3f7;
+    --bg2: #e2eaf1;
+    --node-fill: #ffffff;
+    --scan-opacity: 0;
+    --vignette-opacity: 0;
+    color: #10263a;
+  }
+  body.theme-policy .hdr,
+  body.theme-policy .side,
+  body.theme-policy .btm,
+  body.theme-policy #cnp-def,
+  body.theme-policy #tip {
+    background: #f8fbff;
+    border-color: #8ea5b8;
+    color: #1b3953;
+    box-shadow: none;
+  }
+  body.theme-policy .hdr-title { color: #0e3454; border-bottom-color: rgba(18,58,92,0.35); }
+  body.theme-policy .det-body,
+  body.theme-policy .det-none,
+  body.theme-policy .prim-en,
+  body.theme-policy .cd-body { color: #1b3d58 !important; }
+  body.theme-policy .prim-cn { color: #2f5877 !important; opacity: .68; }
+  body.theme-policy .prim-meta,
+  body.theme-policy .cd-cite,
+  body.theme-policy .src-links span { color: #2e5472 !important; }
+  body.theme-policy .det-flow-item,
+  body.theme-policy .prim-card,
+  body.theme-policy .src-links,
+  body.theme-policy .det-flow-item,
+  body.theme-policy .det-flow-head,
+  body.theme-policy .side-head,
+  body.theme-policy #tip .tip-hint {
+    border-color: #9ab0c2 !important;
+  }
+  body.theme-policy .prim-card { background: rgba(203, 219, 232, 0.35); }
+  body.theme-policy .src-links a,
+  body.theme-policy .prim-doc a,
+  body.theme-policy #cnp-def .cd-cite a { color: #114a77 !important; border-bottom-color: rgba(17,74,119,0.35); }
+  body.theme-policy .src-links a:hover,
+  body.theme-policy .prim-doc a:hover,
+  body.theme-policy #cnp-def .cd-cite a:hover { color: #0a2e4d !important; }
+  body.theme-policy .hdr-sub,
+  body.theme-policy .clk,
+  body.theme-policy .hdr-stat,
+  body.theme-policy .side-head,
+  body.theme-policy .det-year,
+  body.theme-policy .det-flow-head,
+  body.theme-policy .det-flow-item,
+  body.theme-policy .bs,
+  body.theme-policy .tki,
+  body.theme-policy #tip .tip-sub,
+  body.theme-policy #tip .tip-yr,
+  body.theme-policy #tip .tip-hint {
+    color: #2b4f6d !important;
+  }
+
+  /* ── BODY ── */
+  .body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── MAIN SVG AREA ── */
+  .main {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+  }
+  svg#sk {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── SIDE PANEL ── */
+  .side {
+    width: 240px;
+    border-left: 1px solid #163d28;
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    z-index: 5;
+  }
+  .side-head {
+    font-size: 11px; letter-spacing: .15em; color: #2e7050;
+    padding: 10px 12px; border-bottom: 1px solid #163d28;
+    text-transform: uppercase; flex-shrink: 0;
+  }
+  .sc {
+    flex: 1; overflow-y: auto; padding: 12px;
+    scrollbar-width: thin; scrollbar-color: #163d28 transparent;
+  }
+  .sc::-webkit-scrollbar { width: 3px; }
+  .sc::-webkit-scrollbar-thumb { background: #163d28; }
+
+  .det-none { font-size: 13px; color: #285a44; line-height: 1.9; }
+  .det-title { font-size: 16px; letter-spacing: .04em; margin-bottom: 4px; }
+  .det-sub   { font-size: 11px; letter-spacing: .12em; opacity: .6; margin-bottom: 4px; }
+  .det-year  { font-size: 11px; color: #2e7050; letter-spacing: .1em; margin-bottom: 10px; }
+  .det-body  { font-size: 13px; color: #4a8060; line-height: 1.8; margin-bottom: 13px; }
+  .det-flow-head { font-size: 11px; color: #2a6248; letter-spacing: .1em; margin-bottom: 5px; }
+  .det-flow-item {
+    padding: 3px 0; border-bottom: 1px solid #102c1e;
+    font-size: 11px; color: #3e7860;
+  }
+  .det-flow-item + .det-flow-item { margin-top: 1px; }
+  .src-links { margin-top: 10px; padding-top: 8px; border-top: 1px solid #102c1e; }
+  .src-links a {
+    display: inline-block; font-size: 10px; letter-spacing: .08em;
+    color: var(--p2); text-decoration: none; margin-right: 10px;
+    border-bottom: 1px dotted rgba(0,255,157,0.35);
+  }
+  .src-links a:hover { color: var(--p); }
+  .prim-wrap { margin-top: 12px; }
+  .prim-head {
+    font-size: 11px; letter-spacing: .12em; color: #2e7050;
+    margin-bottom: 7px;
+  }
+  .prim-card {
+    background: rgba(0,0,0,0.30);
+    border-left: 2px solid var(--p);
+    padding: 8px 9px 9px 10px;
+    margin-bottom: 8px;
+  }
+  .prim-kicker {
+    font-size: 9px; letter-spacing: .12em; color: #2e7050;
+    margin-bottom: 4px;
+  }
+  .prim-cn {
+    font-size: 10px; line-height: 1.6; opacity: .5; color: #5ea589;
+    margin-bottom: 5px;
+  }
+  .prim-en {
+    font-size: 11px; line-height: 1.65; color: #6fc7a4;
+    margin-bottom: 6px;
+  }
+  .prim-meta {
+    font-size: 9px; letter-spacing: .08em; color: #3e7860;
+    margin-bottom: 4px;
+  }
+  .prim-doc a {
+    font-size: 10px; letter-spacing: .08em;
+    color: var(--p2); text-decoration: none;
+    border-bottom: 1px dotted rgba(0,255,157,0.35);
+  }
+  .prim-doc a:hover { color: var(--p); }
+
+  /* ── BOTTOM BAR ── */
+  .btm {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 20px; border-top: 1px solid #163d28;
+    background: var(--bg2); flex-shrink: 0; z-index: 10;
+  }
+  .tkw { flex: 1; overflow: hidden; margin: 0 14px; }
+  .tki {
+    display: inline-block; font-size: 11px; letter-spacing: .1em;
+    color: #2e7050; white-space: nowrap;
+    animation: tk 38s linear infinite;
+  }
+  @keyframes tk { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+  .bs { font-size: 11px; letter-spacing: .1em; color: #285a44; flex-shrink: 0; }
+  #sel-lbl { transition: color .2s; }
+
+  .blink { animation: bl .9s step-end infinite; }
+  @keyframes bl { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── NODE STATES ── */
+  .node-g { cursor: grab; }
+  body.dragging, body.dragging * { cursor: grabbing !important; }
+
+  /* CSS transitions on SVG presentation props need style= not setAttribute — handled in JS */
+  @keyframes selPulse {
+    0%, 100% { stroke-opacity: 0.9; }
+    50%       { stroke-opacity: 0.22; }
+  }
+  .node-sel-ring { pointer-events: none; }
+  .node-sel-ring.active { animation: selPulse 1.9s ease-in-out infinite; }
+
+  /* ── TOOLTIP ── */
+  #tip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    background: rgba(4,8,10,0.97);
+    border: 1px solid #0f2e1e;
+    padding: 8px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .1em;
+    opacity: 0;
+    transition: opacity .14s ease;
+    max-width: 195px;
+    line-height: 1.75;
+    border-radius: 2px;
+    box-shadow: 0 0 20px rgba(0,255,157,0.07);
+  }
+  #tip.vis { opacity: 1; }
+  #tip .tip-name { font-size: 13px; font-weight: 500; }
+  #tip .tip-sub  { font-size: 10px; color: #2e7050; letter-spacing: .08em; margin-top: 1px; }
+  #tip .tip-yr   { font-size: 9px;  color: #1c5038; letter-spacing: .08em; margin-top: 3px; }
+  #tip .tip-hint { font-size: 9px;  color: #0a1e14; margin-top: 5px; border-top: 1px solid #102c1e; padding-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- CNP DEFINITION CARD -->
+<div id="cnp-def">
+  <div class="cd-head">◈ FRAMEWORK DEFINITION</div>
+  <div class="cd-term">COMPREHENSIVE NATIONAL POWER (综合国力)</div>
+  <div class="cd-body">
+    A systems-theory model measuring state power as a weighted composite of military strength, economic output, S&amp;T capacity, political cohesion, and cultural influence. First formalised by Chinese strategists in 1984.<br><br>
+    The framework defines national power as a <em>non-linear</em> complex system: small imbalances in any sub-index cause disproportionately large distortions in total output. Balance is not optional — it is a structural imperative.<br><br>
+    What drives PRC foreign policy is not absolute CNP level but <em>rank relative to rivals</em> — particularly the narrowing gap between PRC and US CNP scores. Part III shows that every major foreign policy shift from 1993 to 2020 correlates directly with a change in the comparative CNP assessment, not with leadership personality.
+  </div>
+  <div class="cd-cite">
+    SOURCE · JAMESTOWN FOUNDATION ·
+    <a href="https://jamestown.org/prc-conceptions-of-comprehensive-national-power-part-1/" target="_blank" rel="noopener noreferrer">PART I</a>
+    <a href="https://jamestown.org/comprehensive-national-power-part-2-seven-national-development-strategies/" target="_blank" rel="noopener noreferrer">PART II</a>
+    <a href="https://jamestown.org/cnp-part-iii-growing-cnp-drove-foreign-policy-shift/" target="_blank" rel="noopener noreferrer">PART III</a>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="hdr-title" id="hdr-title">// COMPREHENSIVE NATIONAL POWER STRATEGY DEPENDENCY FLOW //</div>
+    <div class="hdr-sub">SEVEN NATIONAL DEVELOPMENT STRATEGIES · RESOURCE FLOW ARCHITECTURE · JAMESTOWN FOUNDATION</div>
+  </div>
+  <div class="hdr-r">
+    <span class="ldot"></span>
+    <span class="clk" id="clk">--:--:-- UTC</span>
+    <span class="hdr-stat">NODES <span id="nc">12</span> / EVENTS <span style="color:var(--p)">16</span></span>
+    <button class="theme-btn" id="theme-btn" title="Cycle visual style">THEME · TACTICAL</button>
+    <button class="snd-btn" id="snd-btn" title="Toggle ambient audio">◈ SND OFF</button>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="body">
+  <div class="main">
+    <svg id="sk" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="side">
+    <div class="side-head">◈ NODE INTELLIGENCE<span class="blink">_</span></div>
+    <div class="sc" id="sb">
+      <div class="det-none">
+        HOVER OR CLICK A NODE<br>TO LOAD DETAIL<span class="blink">_</span>
+        <br><br>
+        <div style="font-size:12px;color:#1c5038;line-height:2.2">
+          7 strategies mapped<br>
+          5 dependency layers<br>
+          Flow width = strength<br>
+          16 Part III events ◆<br><br>
+          ── layer key ──<br>
+          <span style="color:#ff6040">INPUT</span> → geopolitical driver<br>
+          <span style="color:#4a9aff">THEORY</span> → CNP framework<br>
+          <span style="color:#aa88ff">PHASE 1</span> → 1992–2008<br>
+          <span style="color:#00cc7a">PHASE 2</span> → post-2008<br>
+          <span style="color:#00ff9d">OUTPUT</span> → national rejuvenation<br><br>
+          ── markers ──<br>
+          <span style="color:#ff6040">◆</span> = Part III event<br>
+          hover or click any diamond
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tip">
+  <div id="tip-name" class="tip-name"></div>
+  <div id="tip-sub"  class="tip-sub"></div>
+  <div id="tip-yr"   class="tip-yr"></div>
+  <div class="tip-hint">DRAG TO MOVE · CLICK TO LOCK</div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="btm">
+  <div class="bs">HOVER · CLICK · ESC TO DESELECT</div>
+  <div class="tkw">
+    <span class="tki">
+      ░ PART III: GROWING CNP DROVE FOREIGN POLICY SHIFT · 9/11 → US DECLINE ASSESSMENT 2001 · PRC REACHES #2 CNP 2008 · RARE EARTH CUTOFF 2010 · OBOR LAUNCHED 2013 · NEW TYPE GREAT POWER RELATIONS 2013 · DISCOURSE POWER PIVOT 2020 · RSEDS → TSCDS → INNOVATION-DRIVEN · MCF OPTIMIZES ALL SIX · FLOW WIDTH = DEPENDENCY STRENGTH ░
+    </span>
+  </div>
+  <div class="bs" id="sel-lbl" style="color:#285a44">NO SELECTION</div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const NODES = [
+  { id:'usp',  label:'US-PRC',         sub:'competition',      col:0, hex:'#ff6040', w:124,
+    detail:'The primary geopolitical driver of all CNP strategy. Jiang Zemin 1993: "The US is our main diplomatic adversary." Every strategy phase is timed against perceived shifts in the US-PRC power balance. Part III shows that changing assessments of the CNP gap — not just Xi\'s personality — drove the shift from "hide and bide" to assertive diplomacy.', launched:null },
+  { id:'mul',  label:'Multipolarity',  sub:'thesis',           col:0, hex:'#ff9040', w:124,
+    detail:'The shared geopolitical premise: the post-Cold War unipolar order is transitional. Part III documents how Chinese analysts read 9/11, the Iraq invasion, and the 2008 financial crash as evidence of accelerating US decline — validating the multipolarity thesis and justifying more assertive PRC positioning.', launched:null },
+
+  { id:'cnp',  label:'CNP Framework',  sub:'systems model',    col:1, hex:'#4a9aff', w:148,
+    detail:'The master framework. Defines national power as a non-linear complex system requiring balanced development across all sub-indices. Part III adds the comparative dimension: what matters is not just one\'s own CNP score but rank relative to rivals. Policy prescriptions differ depending on where the PRC sits in the global CNP hierarchy.', launched:'1984' },
+  { id:'sys',  label:'Systems Theory', sub:'cybernetics',      col:1, hex:'#7a7aff', w:148,
+    detail:'Cybernetics and systems-of-systems engineering underpin CNP theory. Huang Shuofeng: small imbalances in the initial structure cause disproportionately large distortions in output. Balance is not optional — it is a structural imperative. Part III: Hu Angang applied these methods to rank countries, producing the comparative CNP tables that informed foreign policy shifts.', launched:'1984' },
+
+  { id:'rs',   label:'RSEDS',          sub:'sci & edu 1995',   col:2, hex:'#aa88ff', w:134,
+    detail:'Rejuvenation through Science & Education Development Strategy. Launched 1995. Produced Project 211, Project 985, and Double First Class universities. Directly builds the S&T and education sub-indices of CNP. Part III: PRC surpassing Japan as world\'s 2nd largest economy in 2010 was read as validation of these investment strategies.', launched:'1995' },
+  { id:'sds',  label:'SDS',            sub:'sustainable 1996', col:2, hex:'#9a78ef', w:134,
+    detail:'Sustainable Development Strategy. Launched 1996. Balances economic growth, social development, and environmental protection — directly addressing the structural balance imperative from systems theory. Part III links social stability to CNP scoring: Hu Jintao 2009 noted "CNP competition is becoming increasingly fierce" — social stability was a tracked sub-index.', launched:'1996' },
+  { id:'tsc',  label:'TSCDS',          sub:'talent 2003',      col:2, hex:'#8a68df', w:134,
+    detail:'Talent Strong Country Development Strategy. Launched 2003. Builds on RSEDS but focuses on population quality over institutional capacity. In a non-linear CNP system, human quality is the highest-leverage input variable. Part III: PRC becoming top trade partner of 50%+ of world countries by 2008 reflects accumulated CNP output from talent and education investment.', launched:'2003' },
+  { id:'mcf',  label:'MCF',            sub:'optimizer 2015',   col:2, hex:'#00ff9d', w:134,
+    detail:'Military-Civil Fusion Development Strategy. The optimizer of all other strategies. Part III directly links MCF to foreign policy: artificial island construction in the Spratlys (2013) deployed both military and civil engineering assets — a live MCF operation translating CNP into territorial control.', launched:'2015' },
+
+  { id:'inn',  label:'IDDS',           sub:'innovation 2012',  col:3, hex:'#00ddaa', w:134,
+    detail:'Innovation-Driven Development Strategy. Part III provides the causal chain: the 2012 CASS "Yellow Book" attributed worsening Sino-Japanese relations to a CNP "reversal," and Xi\'s 2016 framing of IDDS explicitly anticipated Western technology decoupling. S&T self-reliance was not precautionary — it was a response to an anticipated decoupling the PRC\'s own CNP rise would trigger.', launched:'2012' },
+  { id:'rcds', label:'RCDS',           sub:'regional 2013',    col:3, hex:'#00bb88', w:134,
+    detail:'Regional Coordinated Development Strategy. Part III context: the 2013 OBOR initiative and 2016 AIIB launch were external projections of CNP, but RCDS was the internal counterpart — ensuring domestic regional balance so CNP calculations did not show structural weakness that rivals could exploit.', launched:'2013' },
+  { id:'rrs',  label:'RRS',            sub:'rural 2017',       col:3, hex:'#009966', w:134,
+    detail:'Rural Revitalization Strategy. Part III: Meng Lingwei 2012 — "if a country with the second largest CNP in the world cannot defend its sovereignty, what is the point of development?" Rural-urban inequality was a CNP vulnerability that undermined the legitimacy of assertive foreign policy. RRS addressed the internal stability sub-index.', launched:'2017' },
+
+  { id:'rej',  label:'Rejuvenation',   sub:'national output',  col:4, hex:'#00ff9d', w:134,
+    detail:'The ultimate strategic end-state. Part III shows what rejuvenation looks like in practice: PRC contributions to the UN grew from $12M (2000) to $380M+ (2021); OBOR launched 2013; AIIB launched 2016; Xi\'s "new type of great power relations" push (2012–13). Each is the PRC translating accumulated CNP into international recognition of its #2 status.', launched:null },
+];
+
+// ── PART III EVENT DATA POINTS ────────────────────────────────────────────────
+// Each event is pinned to a node. Clicking opens event detail in side panel.
+const EVENTS = [
+  { id:'e01', year:'2001', node:'usp',  hex:'#ff6040',
+    title:'9/11 & Afghanistan invasion',
+    body:'Chinese analysts read 9/11 and the subsequent Afghan invasion as evidence of the beginning of US CNP decline — erosion of European alliances and domestic social unrest were tracked CNP sub-indices under "political strength." This became the starting point for reassessing comparative CNP rankings.' },
+  { id:'e02', year:'2003', node:'usp',  hex:'#ff6040',
+    title:'Iraq invasion — EU alliance fracture',
+    body:'The 2003 Iraq invasion further fueled PRC assessments of shifting power dynamics. Chinese analysts cited it as evidence of declining US political strength: failure to maintain robust European alliances and rising domestic opposition were measurable CNP weaknesses.' },
+  { id:'e03', year:'2005', node:'mul',  hex:'#ff9040',
+    title:'Hu Angang: US enters "sustained decline"',
+    body:'Influential Tsinghua scholar Hu Angang classified the US as entering a period of "sustained decline" (持续下降型) while the PRC was experiencing "sustained rising" (持续崛起). This assessment appeared in the Tsinghua China Study annual journal and was published on the State Council web portal.' },
+  { id:'e04', year:'2008', node:'cnp',  hex:'#4a9aff',
+    title:'Beijing Olympics — soft power demonstration',
+    body:'The 2008 Olympics showcased PRC soft power and political strength — both tracked CNP sub-indices. Simultaneously, the PRC became top trade partner of more than half the world\'s countries, and the global financial crash accelerated assessments of a narrowing US-PRC CNP gap.' },
+  { id:'e05', year:'2008', node:'cnp',  hex:'#4a9aff',
+    title:'Hu Angang: PRC reaches #2 CNP globally',
+    body:'Hu Angang argued 2008 was the year the PRC reached #2 status in global CNP, though the Tsinghua China Study volumes dated it to 2005. Men Honghua (2016) placed it in "the second decade of the 21st century." Multiple methodologies converged on the same conclusion: the PRC had surpassed all others except the US.' },
+  { id:'e06', year:'2009', node:'cnp',  hex:'#4a9aff',
+    title:'PRC surpasses Germany as top exporter',
+    body:'By end of 2009 the PRC surpassed Germany as the world\'s top exporting country — a milestone in economic CNP. Hu Jintao\'s 2009 speech explicitly noted that "CNP competition is becoming increasingly fierce," signaling official recognition of the accelerating competition.' },
+  { id:'e07', year:'2010', node:'usp',  hex:'#ff6040',
+    title:'PRC surpasses Japan as 2nd largest economy',
+    body:'One of the most significant milestones in CNP accumulation. The 2012 CASS "Yellow Book" attributed worsening Sino-Japanese relations directly to a "reversal of CNP" (综合国力发生逆转) — the first major instance of CNP calculations explicitly driving diplomatic analysis and, implicitly, policy.' },
+  { id:'e08', year:'2010', node:'usp',  hex:'#ff6040',
+    title:'Rare earth export cutoff to Japan',
+    body:'The PRC cut off rare earth metal exports to Japan (controlling ~80% of Japanese rare earth imports) — a direct translation of economic CNP into coercive power. Yang Jiechi at the 2010 ASEAN forum: "China is a big country, and other countries are small countries, and that is just a fact." The "hide and bide" era was ending.' },
+  { id:'e09', year:'2012', node:'usp',  hex:'#ff6040',
+    title:'Scarborough Shoal & Senkaku incidents',
+    body:'PRC persistent vessel presence around Scarborough Shoal and the Senkakus following 2012 incidents. Meng Lingwei: "if a country with the second largest CNP in the world cannot defend its sovereignty, what is the point of development?" Territorial assertion was framed as a logical consequence of CNP rank.' },
+  { id:'e10', year:'2013', node:'rej',  hex:'#00ff9d',
+    title:'OBOR launched — exporting CNP',
+    body:'One Belt One Road launched 2013. Xi 2013: the PRC would provide development aid "as China\'s economic strength and CNP continue to improve." OBOR was the primary mechanism for translating domestic CNP accumulation into international influence — converting economic power into geopolitical positioning.' },
+  { id:'e11', year:'2013', node:'rej',  hex:'#00ff9d',
+    title:'Xi pushes "new type of great power relations"',
+    body:'At the 2013 US-China Summit, Xi told Obama their countries had entered "a new historical starting point" and called for a "new model of major-country relations" — the clearest instance of CNP calculations directly driving foreign policy. A 2013 Xinhua piece: as the CNP gap narrowed, the PRC should not "passively adapt" but proactively set the agenda.' },
+  { id:'e12', year:'2013', node:'inn',  hex:'#00ddaa',
+    title:'Spratly island construction begins',
+    body:'A year after the Senkaku dispute, the PRC began construction on artificial islands in the Spratlys — eventually building ~3,000 acres housing military bases. This was MCF and CNP theory made kinetic: civil engineering capacity (economic CNP) deployed for military-strategic purposes (military CNP), the definitional core of Military-Civil Fusion.' },
+  { id:'e13', year:'2015', node:'inn',  hex:'#00ddaa',
+    title:'Xi frames IDDS as decoupling defence',
+    body:'Xi\'s 2016 framing of Innovation-Driven Development explicitly anticipated Western technology cutoff. This was not a precautionary measure — it was a response the PRC\'s own analysts predicted: as CNP rose, the West would eventually deny access to technology. IDDS was the strategic answer, built into the Party Charter.' },
+  { id:'e14', year:'2016', node:'rej',  hex:'#00ff9d',
+    title:'AIIB launched — institutional CNP',
+    body:'Asia Infrastructure Investment Bank launched 2016. PRC UN contributions grew from $12M (2000) to $380M+ (2021), making it the 2nd largest contributor to both the UN overall budget and peacekeeping budget. These are direct translations of economic CNP into multilateral institutional power — what Part III calls "providing public goods commensurate with its international position."' },
+  { id:'e15', year:'2017', node:'mul',  hex:'#ff9040',
+    title:'Frustration: CNP did not auto-bestow recognition',
+    body:'Across 2017–2020, Beijing appeared to conclude that accumulated CNP had not automatically bestowed global recognition of a new leadership role. The US rejected Xi\'s "new type of great power relations" framing. Jia Qingguo (Peking University) described the frustration: regional neighbors were not cowed by PRC CNP size, and the US shifted to a competitive posture Beijing was unable to prevent.' },
+  { id:'e16', year:'2020', node:'rej',  hex:'#00ff9d',
+    title:'Pivot to "discourse power"',
+    body:'Beijing\'s response to the recognition gap: building "discourse power" (话语权) commensurate with its international position. This involves undermining strategic rivals via public opinion warfare, finding common ground with willing partners, and deepening cooperation with countries with overlapping interests. A new CNP sub-index — narrative power — enters the strategy.' },
+];
+
+const ARTICLE_URLS = {
+  p1: 'https://jamestown.org/prc-conceptions-of-comprehensive-national-power-part-1/',
+  p2: 'https://jamestown.org/comprehensive-national-power-part-2-seven-national-development-strategies/',
+  p3: 'https://jamestown.org/cnp-part-iii-growing-cnp-drove-foreign-policy-shift/',
+};
+
+const NODE_SOURCE_KEYS = {
+  usp:  ['p1', 'p3'],
+  mul:  ['p1', 'p3'],
+  cnp:  ['p1', 'p3'],
+  sys:  ['p1', 'p3'],
+  rs:   ['p2', 'p3'],
+  sds:  ['p2', 'p3'],
+  tsc:  ['p2', 'p3'],
+  mcf:  ['p2', 'p3'],
+  inn:  ['p2', 'p3'],
+  rcds: ['p2', 'p3'],
+  rrs:  ['p2', 'p3'],
+  rej:  ['p3'],
+};
+
+const PRIMARY_SOURCES = {
+  usp: [
+    {
+      chinese: '“中国是一个大国，其他国家是小国，这是一个事实。”',
+      english: '"China is a big country and other countries are small countries, and that is just a fact."',
+      body: 'Ministry of Foreign Affairs PRC',
+      date: '2010-07-25',
+      docTitle: 'Yang Jiechi Remarks at ASEAN Regional Forum',
+      passage: 'Quoted intervention during ARF exchange on South China Sea',
+      url: 'https://www.fmprc.gov.cn/mfa_eng/topics_665678/yjzxhzzfh_665686/t719460.shtml'
+    }
+  ],
+  mul: [
+    {
+      chinese: '“世界多极化不可逆转，国际力量对比朝着有利于维护世界和平的方向发展。”',
+      english: '"World multipolarization is irreversible, and the international balance of forces is moving in a direction favorable to world peace."',
+      body: 'State Council Information Office',
+      date: '2005-12-22',
+      docTitle: "China's Peaceful Development Road",
+      passage: 'Section I, strategic judgment on global order transition',
+      url: 'http://www.gov.cn/english/official/2005-12/22/content_133475.htm'
+    }
+  ],
+  cnp: [
+    {
+      chinese: '“综合国力竞争日趋激烈。”',
+      english: '"Competition in comprehensive national power is becoming increasingly fierce."',
+      body: 'Central Committee / State Council',
+      date: '2009-09-18',
+      docTitle: 'Hu Jintao Speech at 60th Anniversary of PRC',
+      passage: 'Strategic environment assessment section',
+      url: 'http://www.gov.cn/ldhd/2009-09/18/content_1420124.htm'
+    }
+  ],
+  sys: [
+    {
+      chinese: '“要运用系统工程方法统筹推进现代化建设各项任务。”',
+      english: '"We must apply systems-engineering methods to coordinate all major modernization tasks."',
+      body: 'State Council',
+      date: '2006-02-09',
+      docTitle: 'National Mid- to Long-Term S&T Development Plan Outline (2006–2020)',
+      passage: 'Guiding principles section on coordinated systems approach',
+      url: 'http://www.gov.cn/jrzg/2006-02/09/content_183787.htm'
+    }
+  ],
+  rs: [
+    {
+      chinese: '“实施科教兴国战略，加快建设国家创新体系。”',
+      english: '"Implement the strategy of rejuvenating the country through science and education, and accelerate the building of a national innovation system."',
+      body: 'Central Committee / State Council',
+      date: '1995-05-06',
+      docTitle: 'Decision on Accelerating Scientific and Technological Progress',
+      passage: 'Opening strategic directive',
+      url: 'http://www.gov.cn/test/2008-03/28/content_931480.htm'
+    }
+  ],
+  sds: [
+    {
+      chinese: '“实施可持续发展战略，促进人口、资源、环境与经济社会协调发展。”',
+      english: '"Implement a sustainable development strategy and promote coordinated development of population, resources, environment, economy, and society."',
+      body: 'State Council',
+      date: '1996-03-17',
+      docTitle: 'Ninth Five-Year Plan and 2010 Long-Range Objectives',
+      passage: 'Chapter on sustainable development strategy',
+      url: 'http://www.gov.cn/test/2008-06/18/content_1025410.htm'
+    }
+  ],
+  tsc: [
+    {
+      chinese: '“人才强国战略是党和国家一项重大而紧迫的任务。”',
+      english: '"The talent-strong-nation strategy is a major and urgent task for the Party and the state."',
+      body: 'Central Committee',
+      date: '2003-12-26',
+      docTitle: 'Decision on Further Strengthening Talent Work',
+      passage: 'General requirements section',
+      url: 'http://www.gov.cn/gongbao/content/2004/content_62714.htm'
+    }
+  ],
+  mcf: [
+    {
+      chinese: '“把军民融合发展上升为国家战略，形成全要素、多领域、高效益军民融合深度发展格局。”',
+      english: '"Elevate military-civil fusion development to a national strategy and form an all-factor, multi-domain, high-efficiency deep integration pattern."',
+      body: 'Xinhua / Central Commission for Integrated Military-Civilian Development',
+      date: '2017-06-20',
+      docTitle: 'Xi Jinping Speech at Central Military-Civil Fusion Conference',
+      passage: 'Core strategic directive',
+      url: 'http://www.xinhuanet.com/politics/2017-06/20/c_1121178475.htm'
+    }
+  ],
+  inn: [
+    {
+      chinese: '“创新是引领发展的第一动力。”',
+      english: '"Innovation is the primary driving force for development."',
+      body: 'Central Committee / State Council',
+      date: '2016-05-19',
+      docTitle: 'Outline of National Innovation-Driven Development Strategy',
+      passage: 'Preamble',
+      url: 'http://www.gov.cn/zhengce/2016-05/19/content_5074812.htm'
+    }
+  ],
+  rcds: [
+    {
+      chinese: '“实施区域协调发展战略，推动形成优势互补高质量发展的区域经济布局。”',
+      english: '"Implement the regional coordinated development strategy and promote an advantage-complementary, high-quality regional economic layout."',
+      body: 'State Council',
+      date: '2019-12-01',
+      docTitle: 'Opinions on Establishing a More Effective New Mechanism for Regional Coordinated Development',
+      passage: 'General objectives section',
+      url: 'http://www.gov.cn/zhengce/2019-12/01/content_5457471.htm'
+    }
+  ],
+  rrs: [
+    {
+      chinese: '“乡村振兴战略是新时代‘三农’工作的总抓手。”',
+      english: '"The rural revitalization strategy is the overarching lever for work on agriculture, rural areas, and farmers in the new era."',
+      body: 'Central Committee / State Council',
+      date: '2018-01-02',
+      docTitle: 'Rural Revitalization Strategic Plan (2018–2022)',
+      passage: 'Overall deployment chapter',
+      url: 'http://www.gov.cn/zhengce/2018-09/26/content_5325534.htm'
+    }
+  ],
+  rej: [
+    {
+      chinese: '“实现中华民族伟大复兴，就是中华民族近代以来最伟大的梦想。”',
+      english: '"Realizing the great rejuvenation of the Chinese nation is the greatest dream of the Chinese nation in modern history."',
+      body: 'Xinhua / CPC Central Committee',
+      date: '2012-11-29',
+      docTitle: "Xi Jinping's 'Chinese Dream' Remarks at National Museum",
+      passage: 'Opening formulation of rejuvenation objective',
+      url: 'http://www.xinhuanet.com/politics/2012-11/29/c_113852724.htm'
+    }
+  ]
+};
+
+function sourceLinkHTML(keys) {
+  if (!keys || !keys.length) return '';
+  const labelFor = { p1: 'PART I', p2: 'PART II', p3: 'PART III' };
+  const links = keys.map(k =>
+    `<a href="${ARTICLE_URLS[k]}" target="_blank" rel="noopener noreferrer">${labelFor[k]}</a>`
+  ).join('');
+  return `<div class="src-links"><span style="font-size:10px;color:#2e7050;letter-spacing:.08em">SOURCE · </span>${links}</div>`;
+}
+
+function primarySourcesHTML(nodeId, hex) {
+  const arr = PRIMARY_SOURCES[nodeId];
+  if (!arr || !arr.length) return '';
+  const cards = arr.map(s => `
+    <div class="prim-card" style="border-left-color:${hex}">
+      <div class="prim-kicker">◈ SOURCE DOCUMENT</div>
+      <div class="prim-cn">${s.chinese}</div>
+      <div class="prim-en">${s.english}</div>
+      <div class="prim-meta">${s.body} · ${s.date} · ${s.passage}</div>
+      <div class="prim-doc"><a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.docTitle}</a></div>
+    </div>
+  `).join('');
+  return `<div class="prim-wrap"><div class="det-flow-head">SOURCE DOCUMENTS</div>${cards}</div>`;
+}
+
+
+const FLOWS = [
+  // geopolitical input → theory
+  ['usp',  'cnp',  5, 'drives framework'],
+  ['mul',  'cnp',  3, 'justifies urgency'],
+  ['usp',  'sys',  2, ''],
+
+  // theory → phase 1
+  ['cnp',  'rs',   4, 'S&T sub-index'],
+  ['cnp',  'sds',  3, 'structural balance'],
+  ['cnp',  'tsc',  4, 'human capital'],
+  ['cnp',  'mcf',  5, 'optimize all'],
+  ['sys',  'rs',   3, ''],
+  ['sys',  'sds',  4, 'balance imperative'],
+  ['sys',  'mcf',  5, 'systems logic'],
+
+  // phase 1 → phase 2
+  ['rs',   'inn',  5, 'S&T base'],
+  ['rs',   'tsc',  4, 'feeds'],
+  ['tsc',  'inn',  4, 'talent pipeline'],
+  ['sds',  'rcds', 4, 'regional equity'],
+  ['sds',  'rrs',  3, 'rural balance'],
+  ['mcf',  'inn',  5, 'optimizes'],
+  ['mcf',  'rcds', 3, 'optimizes'],
+  ['mcf',  'rrs',  3, 'optimizes'],
+
+  // phase 2 → output
+  ['inn',  'rej',  5, 'S&T power'],
+  ['rcds', 'rej',  3, 'structural balance'],
+  ['rrs',  'rej',  3, 'social stability'],
+
+  // phase 1 → output (direct)
+  ['rs',   'rej',  3, ''],
+  ['tsc',  'rej',  3, ''],
+  ['mcf',  'rej',  4, 'defense-econ fusion'],
+  ['sds',  'rej',  2, ''],
+];
+
+// ── LAYOUT ────────────────────────────────────────────────────────────────────
+const NS = 'http://www.w3.org/2000/svg';
+const COL_LABELS  = ['INPUT', 'THEORY', 'PHASE 1\n1992–2008', 'PHASE 2\nPOST-2008', 'OUTPUT'];
+const COL_COLORS  = ['#ff6040','#4a9aff','#aa88ff','#00cc7a','#00ff9d'];
+const NODE_H = 50, NODE_GAP = 52;
+
+// Responsive column X positions computed from actual SVG size
+let SVG_W, SVG_H, COL_X;
+
+function computeLayout() {
+  const svgEl = document.getElementById('sk');
+  SVG_W = svgEl.clientWidth  || window.innerWidth - 240;
+  SVG_H = svgEl.clientHeight || window.innerHeight - 90;
+  COL_X = [
+    SVG_W * 0.07,
+    SVG_W * 0.24,
+    SVG_W * 0.44,
+    SVG_W * 0.64,
+    SVG_W * 0.87,
+  ];
+}
+
+function layoutNodes() {
+  const byCols = Array.from({length:5}, () => []);
+  NODES.forEach(n => byCols[n.col].push(n));
+  byCols.forEach((col, ci) => {
+    const totalH = col.length * (NODE_H + NODE_GAP) - NODE_GAP;
+    const startY = Math.max(50, (SVG_H - totalH) / 2) - 20;
+    col.forEach((n, i) => {
+      n.x  = COL_X[ci] - n.w / 2;
+      n.y  = startY + i * (NODE_H + NODE_GAP);
+      n.cx = COL_X[ci];
+      n.cy = n.y + NODE_H / 2;
+      // layout baselines — drag offsets are added on top of these
+      n.layoutX  = n.x;
+      n.layoutY  = n.y;
+      n.layoutCx = n.cx;
+      n.layoutCy = n.cy;
+      n.dragDx   = 0;
+      n.dragDy   = 0;
+    });
+  });
+}
+
+// ── BUILD SVG ─────────────────────────────────────────────────────────────────
+let flowEls   = [];
+let selId     = null;
+let hoverId   = null;
+let dragState = null;
+let nodeElMap = {};         // id → { glowRect, borderRect, selRing, g }
+const nodeMap = {};
+NODES.forEach(n => nodeMap[n.id] = n);
+
+function e(tag, attrs, parent) {
+  const el = document.createElementNS(NS, tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, v));
+  if (parent) parent.appendChild(el);
+  return el;
+}
+
+function getThemeVar(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim();
+}
+
+// ── TOOLTIP helpers ──────────────────────────────────────────────────────────
+const tipEl   = document.getElementById('tip');
+const tipName = document.getElementById('tip-name');
+const tipSub  = document.getElementById('tip-sub');
+const tipYr   = document.getElementById('tip-yr');
+
+function showTip(n, ev) {
+  tipName.textContent  = n.label;
+  tipName.style.color  = n.hex;
+  tipSub.textContent   = n.sub.toUpperCase();
+  tipYr.textContent    = n.launched ? 'LAUNCHED ' + n.launched : '';
+  tipYr.style.display  = n.launched ? 'block' : 'none';
+  moveTip(ev);
+  tipEl.classList.add('vis');
+}
+function hideTip()    { tipEl.classList.remove('vis'); }
+function moveTip(ev) {
+  const x = ev.clientX + 18, y = ev.clientY + 16;
+  tipEl.style.left = Math.min(x, window.innerWidth  - (tipEl.offsetWidth  || 195) - 8) + 'px';
+  tipEl.style.top  = Math.min(y, window.innerHeight - (tipEl.offsetHeight || 80)  - 8) + 'px';
+}
+
+// ── Per-node visual state helpers ────────────────────────────────────────────
+function setNodeHover(id, on) {
+  const els = nodeElMap[id];
+  if (!els || selId === id) return;
+  if (on) {
+    els.glowRect.setAttribute('fill-opacity',     '0.12');
+    els.glowRect.setAttribute('stroke-opacity',   '0.52');
+    els.borderRect.setAttribute('stroke-opacity', '1');
+    els.borderRect.setAttribute('stroke-width',   '1.5');
+  } else {
+    els.glowRect.setAttribute('fill-opacity',     '0.04');
+    els.glowRect.setAttribute('stroke-opacity',   '0.18');
+    els.borderRect.setAttribute('stroke-opacity', '0.72');
+    els.borderRect.setAttribute('stroke-width',   '0.9');
+  }
+}
+
+function setNodeSelected(id, on) {
+  const els = nodeElMap[id];
+  if (!els) return;
+  if (on) {
+    els.selRing.setAttribute('stroke-opacity', '0.85');
+    els.selRing.classList.add('active');
+    els.glowRect.setAttribute('fill-opacity',     '0.16');
+    els.glowRect.setAttribute('stroke-opacity',   '0.65');
+    els.borderRect.setAttribute('stroke-opacity', '1');
+    els.borderRect.setAttribute('stroke-width',   '1.6');
+  } else {
+    els.selRing.setAttribute('stroke-opacity', '0');
+    els.selRing.classList.remove('active');
+    els.glowRect.setAttribute('fill-opacity',     '0.04');
+    els.glowRect.setAttribute('stroke-opacity',   '0.18');
+    els.borderRect.setAttribute('stroke-opacity', '0.72');
+    els.borderRect.setAttribute('stroke-width',   '0.9');
+  }
+}
+
+function buildSVG() {
+  nodeElMap = {};
+  const svg = document.getElementById('sk');
+  svg.innerHTML = '';
+
+  // defs
+  const defs = e('defs', {}, svg);
+  const filt = e('filter', {id:'glow', x:'-30%', y:'-30%', width:'160%', height:'160%'}, defs);
+  e('feGaussianBlur', {stdDeviation:'2.5', result:'blur'}, filt);
+  e('feComposite',    {in:'SourceGraphic', in2:'blur', operator:'over'}, filt);
+
+  // viewBox matching actual size
+  svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+
+  // background
+  e('rect', {width:SVG_W, height:SVG_H, fill:getThemeVar('--bg')}, svg);
+
+  // column band backgrounds
+  for (let ci = 0; ci < 5; ci++) {
+    e('rect', {
+      x: COL_X[ci] - 90, y: 28,
+      width: 180, height: SVG_H - 56,
+      fill: 'rgba(255,255,255,0.007)', rx: '3'
+    }, svg);
+  }
+
+  // column labels
+  COL_LABELS.forEach((lbl, ci) => {
+    const lines = lbl.split('\n');
+    lines.forEach((line, li) => {
+      e('text', {
+        x: COL_X[ci], y: 18 + li * 11,
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'Share Tech Mono, monospace',
+        'font-size': '11', 'letter-spacing': '2',
+        fill: COL_COLORS[ci], 'fill-opacity': '0.72'
+      }, svg).textContent = line;
+    });
+  });
+
+  // ── FLOWS ──
+  flowEls = [];
+  const portOut = {}, portIn = {};
+  NODES.forEach(n => { portOut[n.id] = 0; portIn[n.id] = 0; });
+  const outTotal = {}, inTotal = {};
+  NODES.forEach(n => { outTotal[n.id] = 0; inTotal[n.id] = 0; });
+  FLOWS.forEach(([s, t, w]) => { outTotal[s] += w; inTotal[t] += w; });
+
+  FLOWS.forEach(([sid, tid, weight, label]) => {
+    const sn = nodeMap[sid], tn = nodeMap[tid];
+    if (!sn || !tn) return;
+
+    const sw = Math.max(1.2, weight * 1.9);
+    const sScale = (NODE_H - 8) / outTotal[sid];
+    const tScale = (NODE_H - 8) / inTotal[tid];
+    const sy = sn.y + 4 + portOut[sid] * sScale + sw / 2;
+    const ty = tn.y + 4 + portIn[tid]  * tScale + sw / 2;
+    portOut[sid] += weight;
+    portIn[tid]  += weight;
+
+    const x1 = sn.x + sn.w, x2 = tn.x;
+    const cx1 = x1 + (x2 - x1) * 0.42;
+    const cx2 = x1 + (x2 - x1) * 0.58;
+
+    const path = e('path', {
+      d: `M${x1},${sy} C${cx1},${sy} ${cx2},${ty} ${x2},${ty}`,
+      fill: 'none',
+      stroke: sn.hex,
+      'stroke-width': sw,
+      'stroke-opacity': '0.17',
+      'stroke-linecap': 'round',
+    }, svg);
+
+    flowEls.push({ el: path, sid, tid, weight, label, base: 0.17, curOp: 0.17, targetOp: 0.17, targetW: Math.max(1.2, weight * 1.9),
+      sYOff: sy - sn.y,   // y offset relative to source node — used by updateFlowPath
+      tYOff: ty - tn.y }); // y offset relative to target node
+  });
+
+  // ── NODES ──
+  NODES.forEach(n => {
+    const g = e('g', {class:'node-g'}, svg);
+
+    // outer glow halo
+    const glowRect = e('rect', {
+      x: n.x-4, y: n.y-4,
+      width: n.w+8, height: NODE_H+8, rx: '6',
+      fill: n.hex, 'fill-opacity': '0.04',
+      stroke: n.hex, 'stroke-width': '0.6', 'stroke-opacity': '0.18',
+      class: 'node-glow'
+    }, g);
+
+    // selection ring (initially invisible, pulsed via CSS when .active)
+    const selRing = e('rect', {
+      x: n.x-9, y: n.y-8,
+      width: n.w+18, height: NODE_H+16, rx: '9',
+      fill: 'none',
+      stroke: n.hex, 'stroke-width': '1.6', 'stroke-opacity': '0',
+      class: 'node-sel-ring'
+    }, g);
+
+    // main body
+    const borderRect = e('rect', {
+      x: n.x, y: n.y,
+      width: n.w, height: NODE_H, rx: '3',
+      fill: getThemeVar('--node-fill'),
+      stroke: n.hex, 'stroke-width': '0.9', 'stroke-opacity': '0.72',
+      class: 'node-rect'
+    }, g);
+
+    nodeElMap[n.id] = { glowRect, borderRect, selRing, g };
+
+    // year badge
+    if (n.launched) {
+      e('rect', {
+        x: n.x + n.w - 38, y: n.y + 3,
+        width: 36, height: 13, rx: '1',
+        fill: n.hex, 'fill-opacity': '0.13'
+      }, g);
+      e('text', {
+        x: n.x + n.w - 19, y: n.y + 10,
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'Share Tech Mono, monospace',
+        'font-size': '9', fill: n.hex, 'fill-opacity': '0.85'
+      }, g).textContent = n.launched;
+    }
+
+    // label
+    e('text', {
+      x: n.cx, y: n.y + 18,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      'font-family': 'Share Tech Mono, monospace',
+      'font-size': '13', 'font-weight': '500',
+      fill: n.hex, 'fill-opacity': '0.96',
+      class: 'node-label'
+    }, g).textContent = n.label;
+
+    // sub-label
+    e('text', {
+      x: n.cx, y: n.y + 36,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      'font-family': 'Share Tech Mono, monospace',
+      'font-size': '10', fill: n.hex, 'fill-opacity': '0.48'
+    }, g).textContent = n.sub;
+
+    // padded hit area — 10px larger on every side for easy targeting
+    const HP = 10;
+    const hit = e('rect', {
+      x: n.x - HP, y: n.y - HP,
+      width: n.w + HP * 2, height: NODE_H + HP * 2,
+      fill: 'transparent', stroke: 'none'
+    }, g);
+
+    hit.addEventListener('mousedown', ev => {
+      ev.preventDefault();
+      dragState = { node: n, startX: ev.clientX, startY: ev.clientY,
+                    origDx: n.dragDx, origDy: n.dragDy, moved: false };
+    });
+    hit.addEventListener('mouseenter', ev => {
+      if (dragState) return;
+      hoverId = n.id;
+      setNodeHover(n.id, true);
+      showTip(n, ev);
+      if (!selId) { highlightNode(n.id); showDetail(n.id); }
+    });
+    hit.addEventListener('mousemove', ev => { if (!dragState) moveTip(ev); });
+    hit.addEventListener('mouseleave', () => {
+      if (dragState) return;
+      hoverId = null;
+      setNodeHover(n.id, false);
+      hideTip();
+      if (!selId) { resetHighlight(); showDetail(null); }
+    });
+  });
+
+  // ── EVENT MARKERS ──
+  // Group events by node, stack vertically below each node
+  const eventsByNode = {};
+  EVENTS.forEach(ev => {
+    if (!eventsByNode[ev.node]) eventsByNode[ev.node] = [];
+    eventsByNode[ev.node].push(ev);
+  });
+
+  Object.entries(eventsByNode).forEach(([nid, evs]) => {
+    const n = nodeMap[nid];
+    if (!n) return;
+    const totalEvW = evs.length * 28 + (evs.length - 1) * 4;
+    const startX   = n.cx - totalEvW / 2;
+    const markerY  = n.y + NODE_H + 10;
+
+    evs.forEach((ev, ei) => {
+      const mx = startX + ei * 32 + 14;
+      const g  = e('g', { class:'ev-marker', style:'cursor:pointer' }, nodeElMap[nid].g);
+
+      // diamond shape
+      const d = 7;
+      e('polygon', {
+        points: `${mx},${markerY-d} ${mx+d},${markerY} ${mx},${markerY+d} ${mx-d},${markerY}`,
+        fill: ev.hex, 'fill-opacity': '0.18',
+        stroke: ev.hex, 'stroke-width': '1', 'stroke-opacity': '0.75',
+        class: 'ev-diamond'
+      }, g);
+
+      // year label
+      e('text', {
+        x: mx, y: markerY + d + 9,
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': 'Share Tech Mono, monospace',
+        'font-size': '8', fill: ev.hex, 'fill-opacity': '0.6'
+      }, g).textContent = ev.year;
+
+      // connector line from diamond up to node bottom
+      e('line', {
+        x1: mx, y1: n.y + NODE_H,
+        x2: mx, y2: markerY - d,
+        stroke: ev.hex, 'stroke-width': '0.5', 'stroke-opacity': '0.25',
+        'stroke-dasharray': '2 2'
+      }, g);
+
+      // hit area + interaction
+      const hit2 = e('rect', {
+        x: mx - d - 2, y: markerY - d - 2,
+        width: (d + 2) * 2, height: (d + 2) * 2 + 14,
+        fill: 'transparent', stroke: 'none'
+      }, g);
+
+      hit2.addEventListener('mouseenter', () => {
+        if (!selId) {
+          g.querySelector('.ev-diamond').setAttribute('fill-opacity', '0.45');
+          showEventDetail(ev);
+        }
+      });
+      hit2.addEventListener('mouseleave', () => {
+        if (!selId) {
+          g.querySelector('.ev-diamond').setAttribute('fill-opacity', '0.18');
+          showDetail(null);
+        }
+      });
+      hit2.addEventListener('click', ev2 => {
+        ev2.stopPropagation();
+        if (selId === 'ev_' + ev.id) {
+          selId = null;
+          g.querySelector('.ev-diamond').setAttribute('fill-opacity', '0.18');
+          resetHighlight();
+          showDetail(null);
+          playBlip();
+          document.getElementById('sel-lbl').textContent = 'NO SELECTION';
+          document.getElementById('sel-lbl').style.color = '#285a44';
+        } else {
+          if (selId && nodeElMap[selId]) setNodeSelected(selId, false);
+          if (selId) resetHighlight();
+          selId = 'ev_' + ev.id;
+          highlightNode(nid);
+          g.querySelector('.ev-diamond').setAttribute('fill-opacity', '0.75');
+          showEventDetail(ev);
+          playZap();
+          document.getElementById('sel-lbl').textContent = ev.year + ' · ' + ev.title.substring(0, 22).toUpperCase();
+          document.getElementById('sel-lbl').style.color = ev.hex;
+        }
+      });
+    });
+  });
+}
+
+// ── DRAG ──────────────────────────────────────────────────────────────────────
+function updateFlowPath(f) {
+  const sn = nodeMap[f.sid], tn = nodeMap[f.tid];
+  const x1 = sn.x + sn.w, x2 = tn.x;
+  const cx1 = x1 + (x2 - x1) * 0.42;
+  const cx2 = x1 + (x2 - x1) * 0.58;
+  const sy = sn.y + f.sYOff;
+  const ty = tn.y + f.tYOff;
+  f.el.setAttribute('d', `M${x1},${sy} C${cx1},${sy} ${cx2},${ty} ${x2},${ty}`);
+}
+
+function updateNodeFlows(id) {
+  flowEls.forEach(f => { if (f.sid === id || f.tid === id) updateFlowPath(f); });
+}
+
+document.addEventListener('mousemove', ev => {
+  if (!dragState) return;
+  const ddx = ev.clientX - dragState.startX;
+  const ddy = ev.clientY - dragState.startY;
+  if (!dragState.moved && (Math.abs(ddx) > 4 || Math.abs(ddy) > 4)) {
+    dragState.moved = true;
+    document.body.classList.add('dragging');
+    hideTip();
+  }
+  if (!dragState.moved) return;
+
+  const svgRect = document.getElementById('sk').getBoundingClientRect();
+  const n = dragState.node;
+  n.dragDx = dragState.origDx + ddx * (SVG_W / svgRect.width);
+  n.dragDy = dragState.origDy + ddy * (SVG_H / svgRect.height);
+  n.x  = n.layoutX  + n.dragDx;
+  n.y  = n.layoutY  + n.dragDy;
+  n.cx = n.layoutCx + n.dragDx;
+  n.cy = n.layoutCy + n.dragDy;
+
+  nodeElMap[n.id].g.setAttribute('transform', `translate(${n.dragDx},${n.dragDy})`);
+  updateNodeFlows(n.id);
+});
+
+function snapBack(n) {
+  function step() {
+    n.dragDx *= 0.82;
+    n.dragDy *= 0.82;
+    n.x  = n.layoutX  + n.dragDx;
+    n.y  = n.layoutY  + n.dragDy;
+    n.cx = n.layoutCx + n.dragDx;
+    n.cy = n.layoutCy + n.dragDy;
+    nodeElMap[n.id].g.setAttribute('transform', `translate(${n.dragDx},${n.dragDy})`);
+    updateNodeFlows(n.id);
+    if (Math.abs(n.dragDx) > 0.3 || Math.abs(n.dragDy) > 0.3) {
+      requestAnimationFrame(step);
+    } else {
+      n.dragDx = 0; n.dragDy = 0;
+      n.x = n.layoutX; n.y = n.layoutY; n.cx = n.layoutCx; n.cy = n.layoutCy;
+      nodeElMap[n.id].g.removeAttribute('transform');
+      updateNodeFlows(n.id);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+document.addEventListener('mouseup', () => {
+  if (!dragState) return;
+  document.body.classList.remove('dragging');
+  const n = dragState.node;
+  if (!dragState.moved) {
+    toggleSelect(n.id);
+  } else {
+    // snap back if the node's centre escapes the SVG viewport
+    const margin = 20;
+    if (n.cx < margin || n.cx > SVG_W - margin ||
+        n.cy < margin || n.cy > SVG_H - margin) {
+      snapBack(n);
+    }
+  }
+  dragState = null;
+});
+
+// ── INTERACTION ───────────────────────────────────────────────────────────────
+function clearSelection() {
+  const prev = selId;
+  selId = null;
+  if (prev) setNodeSelected(prev, false);
+  resetHighlight();
+  showDetail(null);
+  playBlip();
+  document.getElementById('sel-lbl').textContent = 'NO SELECTION';
+  document.getElementById('sel-lbl').style.color = '#285a44';
+}
+
+function toggleSelect(id) {
+  if (selId === id) {
+    clearSelection();
+  } else {
+    if (selId) { setNodeSelected(selId, false); }
+    selId = id;
+    setNodeSelected(id, true);
+    highlightNode(id);
+    showDetail(id);
+    playZap();
+    document.getElementById('sel-lbl').textContent = nodeMap[id].label.toUpperCase();
+    document.getElementById('sel-lbl').style.color = 'var(--p)';
+  }
+}
+
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && selId) { clearSelection(); }   // clearSelection calls playBlip
+});
+
+function highlightNode(id) {
+  const connected = new Set([id]);
+  flowEls.forEach(f => {
+    if (f.sid === id || f.tid === id) { connected.add(f.sid); connected.add(f.tid); }
+  });
+  const svg = document.getElementById('sk');
+  svg.querySelectorAll('.node-rect').forEach((r, i) => {
+    const active = connected.has(NODES[i].id);
+    r.setAttribute('stroke-opacity', active ? '1' : '0.10');
+  });
+  svg.querySelectorAll('.node-label').forEach((t, i) => {
+    t.setAttribute('fill-opacity', connected.has(NODES[i].id) ? '1' : '0.15');
+  });
+  svg.querySelectorAll('.node-glow').forEach((g, i) => {
+    g.setAttribute('fill-opacity', connected.has(NODES[i].id) ? '0.14' : '0.01');
+  });
+  // mark target opacities — animateFlows will lerp toward these
+  flowEls.forEach(f => {
+    const active = f.sid === id || f.tid === id;
+    f.targetOp = active ? 0.80 : 0.025;
+    f.targetW  = active ? f.weight * 2.7 : f.weight * 1.9;
+    if (selId) {
+      // snap immediately when locked; lerp only on hover
+      f.curOp = f.targetOp;
+      f.el.setAttribute('stroke-opacity', f.targetOp);
+      f.el.setAttribute('stroke-width',   f.targetW);
+    }
+  });
+}
+
+function resetHighlight() {
+  const svg = document.getElementById('sk');
+  svg.querySelectorAll('.node-rect').forEach(r  => r.setAttribute('stroke-opacity', '0.72'));
+  svg.querySelectorAll('.node-label').forEach(t  => t.setAttribute('fill-opacity',   '0.96'));
+  svg.querySelectorAll('.node-glow').forEach(g   => g.setAttribute('fill-opacity',   '0.04'));
+  flowEls.forEach(f => {
+    f.targetOp = f.base;
+    f.targetW  = f.weight * 1.9;
+    // don't snap curOp — let animateFlows lerp it back
+  });
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────────────────────────
+function showDetail(id) {
+  const sb = document.getElementById('sb');
+  if (!id) {
+    sb.innerHTML = `
+      <div class="det-none">
+        HOVER OR CLICK A NODE<br>TO LOAD DETAIL<span class="blink">_</span>
+        <br><br>
+        <div style="font-size:12px;color:#1c5038;line-height:2.2">
+          7 strategies mapped<br>
+          5 dependency layers<br>
+          Flow width = strength<br><br>
+          ── layer key ──<br>
+          <span style="color:#ff6040">INPUT</span> → geopolitical driver<br>
+          <span style="color:#4a9aff">THEORY</span> → CNP framework<br>
+          <span style="color:#aa88ff">PHASE 1</span> → 1992–2008<br>
+          <span style="color:#00cc7a">PHASE 2</span> → post-2008<br>
+          <span style="color:#00ff9d">OUTPUT</span> → national rejuvenation
+        </div>
+      </div>`;
+    return;
+  }
+  const n = nodeMap[id];
+  const inF  = flowEls.filter(f => f.tid === id);
+  const outF = flowEls.filter(f => f.sid === id);
+
+  const flowRow = (f, dir) => {
+    const other = dir === 'in' ? nodeMap[f.sid] : nodeMap[f.tid];
+    const arr = dir === 'in' ? '←' : '→';
+    return `<div class="det-flow-item">
+      ${arr} <span style="color:${other.hex}">${other.label}</span>
+      <span style="color:#285a44"> (str ${f.weight})</span>
+      ${f.label ? `<span style="color:#2e7050"> · ${f.label}</span>` : ''}
+    </div>`;
+  };
+
+  sb.innerHTML = `
+    <div class="det-title" style="color:${n.hex}">${n.label}</div>
+    <div class="det-sub"   style="color:${n.hex}">${n.sub.toUpperCase()}</div>
+    ${n.launched ? `<div class="det-year">LAUNCHED ${n.launched}</div>` : '<div style="margin-bottom:10px"></div>'}
+    <div class="det-body">${n.detail}</div>
+    ${inF.length  ? `<div class="det-flow-head">RECEIVES FROM</div>${inF.map(f=>flowRow(f,'in')).join('')}<div style="margin-bottom:10px"></div>` : ''}
+    ${outF.length ? `<div class="det-flow-head">FEEDS INTO</div>${outF.map(f=>flowRow(f,'out')).join('')}` : ''}
+    ${sourceLinkHTML(NODE_SOURCE_KEYS[id] || ['p3'])}
+    ${primarySourcesHTML(id, n.hex)}`;
+}
+
+function showEventDetail(ev) {
+  const n = nodeMap[ev.node];
+  const sb = document.getElementById('sb');
+  sb.innerHTML = `
+    <div style="font-size:10px;color:${ev.hex};letter-spacing:.12em;margin-bottom:4px;opacity:.7">◈ PART III EVENT</div>
+    <div style="font-size:9px;color:${ev.hex};letter-spacing:.1em;margin-bottom:6px;opacity:.55">${ev.year}</div>
+    <div class="det-title" style="color:${ev.hex};font-size:14px;margin-bottom:10px">${ev.title}</div>
+    <div class="det-body">${ev.body}</div>
+    <div style="height:1px;background:#102c1e;margin:10px 0"></div>
+    <div class="det-flow-head">LINKED NODE</div>
+    <div class="det-flow-item" style="cursor:pointer;font-size:11px" onclick="toggleSelect('${n.id}')">
+      → <span style="color:${n.hex}">${n.label}</span>
+      <span style="color:#285a44"> · click to expand</span>
+    </div>
+    ${sourceLinkHTML(['p3'])}`;
+}
+
+// ── FLOW PULSE ANIMATION ──────────────────────────────────────────────────────
+let t = 0;
+function animateFlows() {
+  requestAnimationFrame(animateFlows);
+  t += 0.018;
+
+  if (selId) return; // locked selection: highlightNode already set values
+
+  flowEls.forEach((f, i) => {
+    if (hoverId) {
+      // lerp toward hover-highlight targets
+      const target = f.targetOp !== undefined ? f.targetOp : f.base;
+      const targetW = f.targetW  !== undefined ? f.targetW  : f.weight * 1.9;
+      f.curOp += (target  - f.curOp) * 0.14;
+      const curW = parseFloat(f.el.getAttribute('stroke-width'));
+      const newW = curW + (targetW - curW) * 0.14;
+      f.el.setAttribute('stroke-opacity', Math.max(0.01, f.curOp));
+      f.el.setAttribute('stroke-width',   newW);
+    } else {
+      // lerp back toward pulse base (smooth fade-out of highlight)
+      const pulse = f.base + Math.sin(t * 0.7 + i * 0.65) * 0.048;
+      const target = f.targetOp !== undefined ? f.targetOp : f.base;
+      if (Math.abs(f.curOp - target) > 0.005) {
+        f.curOp += (target - f.curOp) * 0.10;
+      } else {
+        f.curOp = pulse;
+      }
+      f.el.setAttribute('stroke-opacity', Math.max(0.06, f.curOp));
+      f.el.setAttribute('stroke-width',   f.weight * 1.9);
+    }
+  });
+}
+
+// ── CLOCK ─────────────────────────────────────────────────────────────────────
+function tickClock() {
+  const n = new Date(), c = document.getElementById('clk');
+  if (c) c.textContent =
+    String(n.getUTCHours()).padStart(2,'0') + ':' +
+    String(n.getUTCMinutes()).padStart(2,'0') + ':' +
+    String(n.getUTCSeconds()).padStart(2,'0') + ' UTC';
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── RESIZE ────────────────────────────────────────────────────────────────────
+function rebuild() {
+  computeLayout();
+  layoutNodes();
+  buildSVG();
+  resetHighlight();
+  if (selId && nodeMap[selId]) {
+    setNodeSelected(selId, true);
+    highlightNode(selId);
+    showDetail(selId);
+  }
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(rebuild, 120);
+});
+
+// ── AUDIO ─────────────────────────────────────────────────────────────────────
+let audioCtx      = null;
+let ambientMaster = null;
+let audioEnabled  = false;
+let audioBooted   = false;
+
+function makeNoiseBuf(ctx, secs) {
+  const buf  = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * secs), ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function bootAudio() {
+  if (audioBooted) { audioCtx && audioCtx.resume(); return; }
+  audioBooted = true;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+
+    ambientMaster = audioCtx.createGain();
+    ambientMaster.gain.value = 0;
+    ambientMaster.connect(audioCtx.destination);
+
+    // ── drone layer: three detuned sines ──
+    const droneGain = audioCtx.createGain();
+    droneGain.gain.value = 0.45;
+    [54, 55.3, 110.6].forEach(f => {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(droneGain); osc.start();
+    });
+
+    // LFO very slow (~0.03 Hz = ~33 s cycle) — breathes, doesn't pulse
+    const lfo = audioCtx.createOscillator();
+    const lfoD = audioCtx.createGain();
+    lfo.type = 'sine'; lfo.frequency.value = 0.03;
+    lfoD.gain.value = 0.22;               // range: 0.23 – 0.67, never hits 0
+    lfo.connect(lfoD); lfoD.connect(droneGain.gain); lfo.start();
+
+    const hpf = audioCtx.createBiquadFilter();
+    hpf.type = 'highpass'; hpf.frequency.value = 40;
+    droneGain.connect(hpf); hpf.connect(ambientMaster);
+
+    // ── static layer: looping noise through narrow BPF ──
+    const staticSrc = audioCtx.createBufferSource();
+    staticSrc.buffer = makeNoiseBuf(audioCtx, 2);
+    staticSrc.loop = true;
+    const staticFilt = audioCtx.createBiquadFilter();
+    staticFilt.type = 'bandpass'; staticFilt.frequency.value = 3200; staticFilt.Q.value = 0.4;
+    const staticGain = audioCtx.createGain();
+    staticGain.gain.value = 0.055;        // very subtle hiss layer
+    staticSrc.connect(staticFilt); staticFilt.connect(staticGain);
+    staticGain.connect(ambientMaster);
+    staticSrc.start();
+
+  } catch (err) { audioBooted = false; }
+}
+
+function setAmbient(targetGain) {
+  if (!audioCtx) return;
+  audioCtx.resume();
+  const now = audioCtx.currentTime;
+  ambientMaster.gain.cancelScheduledValues(now);
+  ambientMaster.gain.setValueAtTime(ambientMaster.gain.value, now);
+  ambientMaster.gain.linearRampToValueAtTime(targetGain, now + (targetGain > 0 ? 2.0 : 1.2));
+}
+
+// electrical shock — select
+function playZap() {
+  if (!audioCtx || !audioEnabled) return;
+  const ctx = audioCtx, now = ctx.currentTime;
+
+  // 1. broadband noise burst — the "crack" of the discharge
+  const nSrc  = ctx.createBufferSource();
+  nSrc.buffer = makeNoiseBuf(ctx, 0.14);
+  const nFilt = ctx.createBiquadFilter();
+  nFilt.type = 'bandpass'; nFilt.frequency.value = 2800; nFilt.Q.value = 0.6;
+  const nGain = ctx.createGain();
+  nGain.gain.setValueAtTime(0.001, now);
+  nGain.gain.linearRampToValueAtTime(0.55, now + 0.002);
+  nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+  nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(ctx.destination);
+  nSrc.start(now); nSrc.stop(now + 0.14);
+
+  // 2. sawtooth body — rapid frequency collapse (voltage discharge feel)
+  const osc  = ctx.createOscillator();
+  osc.type   = 'sawtooth';
+  osc.frequency.setValueAtTime(320, now);
+  osc.frequency.exponentialRampToValueAtTime(38, now + 0.13);
+  const oGain = ctx.createGain();
+  oGain.gain.setValueAtTime(0.001, now);
+  oGain.gain.linearRampToValueAtTime(0.30, now + 0.003);
+  oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+  osc.connect(oGain); oGain.connect(ctx.destination);
+  osc.start(now); osc.stop(now + 0.16);
+
+  // 3. ultra-short high-freq crackle transient
+  const cSrc  = ctx.createBufferSource();
+  cSrc.buffer = makeNoiseBuf(ctx, 0.025);
+  const cFilt = ctx.createBiquadFilter();
+  cFilt.type = 'highpass'; cFilt.frequency.value = 5000;
+  const cGain = ctx.createGain();
+  cGain.gain.setValueAtTime(0.001, now);
+  cGain.gain.linearRampToValueAtTime(0.45, now + 0.001);
+  cGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+  cSrc.connect(cFilt); cFilt.connect(cGain); cGain.connect(ctx.destination);
+  cSrc.start(now); cSrc.stop(now + 0.03);
+}
+
+// soft static discharge — deselect / clear
+function playBlip() {
+  if (!audioCtx || !audioEnabled) return;
+  const ctx = audioCtx, now = ctx.currentTime;
+  const nSrc  = ctx.createBufferSource();
+  nSrc.buffer = makeNoiseBuf(ctx, 0.07);
+  const filt  = ctx.createBiquadFilter();
+  filt.type = 'bandpass'; filt.frequency.value = 1800; filt.Q.value = 1.2;
+  const gain  = ctx.createGain();
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.linearRampToValueAtTime(0.28, now + 0.003);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+  nSrc.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+  nSrc.start(now); nSrc.stop(now + 0.08);
+}
+
+// ── SND button: cycles OFF → LOW → MED → HIGH → OFF ──────────────────────────
+const VOL_STATES = [
+  { label: '◈ SND OFF', cls: '',        gain: 0,    enabled: false },
+  { label: '◈ SND LOW', cls: 'vol-low', gain: 0.10, enabled: true  },
+  { label: '◈ SND MED', cls: 'vol-med', gain: 0.28, enabled: true  },
+  { label: '◈ SND HIGH',cls: 'vol-high',gain: 0.50, enabled: true  },
+];
+let volIdx = 0;
+
+document.getElementById('snd-btn').addEventListener('click', () => {
+  bootAudio();
+  volIdx = (volIdx + 1) % VOL_STATES.length;
+  const s   = VOL_STATES[volIdx];
+  const btn = document.getElementById('snd-btn');
+  audioEnabled = s.enabled;
+  setAmbient(s.gain);
+  btn.textContent = s.label;
+  btn.className   = 'snd-btn' + (s.cls ? ' ' + s.cls : '');
+});
+
+// ── TITLE DEFINITION CARD ─────────────────────────────────────────────────────
+(function () {
+  const titleEl = document.getElementById('hdr-title');
+  const defCard = document.getElementById('cnp-def');
+  if (!titleEl || !defCard) return;
+  titleEl.addEventListener('mouseenter', () => defCard.classList.add('vis'));
+  titleEl.addEventListener('mouseleave', () => defCard.classList.remove('vis'));
+})();
+
+// ── THEME SWITCHER ─────────────────────────────────────────────────────────────
+const THEMES = [
+  { key: 'tactical', cls: '',             label: 'THEME · TACTICAL' },
+  { key: 'glass',    cls: 'theme-glass',  label: 'THEME · GLASS OPS' },
+  { key: 'policy',   cls: 'theme-policy', label: 'THEME · POLICY BRIEF' },
+];
+let themeIdx = 0;
+
+function applyTheme(idx) {
+  themeIdx = (idx + THEMES.length) % THEMES.length;
+  document.body.classList.remove('theme-glass', 'theme-policy');
+  if (THEMES[themeIdx].cls) document.body.classList.add(THEMES[themeIdx].cls);
+  document.getElementById('theme-btn').textContent = THEMES[themeIdx].label;
+  rebuild();
+}
+
+document.getElementById('theme-btn').addEventListener('click', () => {
+  applyTheme(themeIdx + 1);
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  rebuild();
+  animateFlows();
+});
+</script>
+</body>
+</html>
