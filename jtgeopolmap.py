@@ -660,6 +660,12 @@ def build_html(all_data: dict, days: int) -> str:
         "  ));",
         1,
     )
+    globe_d3_js = globe_d3_js.replace(
+        "    const relBase = {\n      dragmode: 'zoom',",
+        "    const relBase = {\n"
+        "      dragmode: (typeof window !== 'undefined' && 'ontouchstart' in window ? false : 'zoom'),",
+        1,
+    )
 
     return (
         f"""<!DOCTYPE html>
@@ -1234,6 +1240,7 @@ def build_html(all_data: dict, days: int) -> str:
       min-height: 45vh;
       max-height: 45vh;
       width: 100%;
+      touch-action: manipulation;
     }}
 
     #sidebar {{
@@ -1287,26 +1294,32 @@ def build_html(all_data: dict, days: int) -> str:
       max-height: 220px;
     }}
 
+    /* Viewport-fixed sheet: avoids clipping from flex ancestors; sits above stats bar */
     #sidebar-drawer {{
-      position: absolute;
+      position: fixed;
       left: 0;
       right: 0;
-      bottom: 0;
-      height: min(78vh, calc(100vh - 120px));
-      max-height: calc(100dvh - 100px);
-      z-index: 5000;
+      bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+      height: min(78dvh, calc(100dvh - 45vh - 52px));
+      max-height: calc(100dvh - 45vh - 52px);
+      z-index: 10060;
       background: #161b22;
       border-top: 1px solid #30363d;
       border-radius: 12px 12px 0 0;
       box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.55);
       display: flex;
       flex-direction: column;
-      transform: translateY(100%);
+      transform: translate3d(0, 100%, 0);
       transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
       overflow: hidden;
+      pointer-events: none;
+      -webkit-transform: translate3d(0, 100%, 0);
     }}
-    #sidebar.drawer-open #sidebar-drawer {{
-      transform: translateY(0);
+    #sidebar.drawer-open #sidebar-drawer,
+    body.jf-drawer-open #sidebar-drawer {{
+      transform: translate3d(0, 0, 0);
+      -webkit-transform: translate3d(0, 0, 0);
+      pointer-events: auto;
     }}
 
     #sidebar-drawer-handle {{
@@ -1346,6 +1359,8 @@ def build_html(all_data: dict, days: int) -> str:
     }}
 
     #stats-bar {{
+      position: relative;
+      z-index: 5;
       font-size: 0.62rem;
       padding: 4px 12px;
       flex-wrap: nowrap;
@@ -1790,12 +1805,41 @@ const BASE_LAYOUT = {{
   }},
 }};
 
+function touchAwareMapLayout() {{
+  try {{
+    const L = JSON.parse(JSON.stringify(BASE_LAYOUT));
+    /* Touch + geo: zoom dragmode often eats single-finger taps before plotly_click fires */
+    if (typeof window !== 'undefined' && 'ontouchstart' in window) L.dragmode = false;
+    return L;
+  }} catch (_) {{
+    return BASE_LAYOUT;
+  }}
+}}
+
 const MAP_MARGIN = {{ t: 4, b: 4, l: 8, r: 16 }};
 const GEO_DOMAIN_FULL = {{ x: [0, 1], y: [0, 1] }};
 
 /** Crimea bbox (lon/lat) — flat map: RUS polygon includes Crimea; use pointer + projection to show override tooltip */
 const CRIMEA_LON_RANGE = [32.5, 36.7];
 const CRIMEA_LAT_RANGE = [44.4, 46.3];
+
+/** Prefer choropleth trace (0); fall back to any hit with a country in the current sidebar. */
+function pickIsoFromPlotlyClick(data) {{
+  if (!currentPub || !DATASETS[currentPub]) return null;
+  const sb = DATASETS[currentPub].sidebar;
+  const pts = data.points || [];
+  for (let i = 0; i < pts.length; i++) {{
+    const p = pts[i];
+    if (!p || !p.location) continue;
+    if (typeof p.curveNumber === 'number' && p.curveNumber !== 0) continue;
+    if (sb[p.location]) return p.location;
+  }}
+  for (let i = 0; i < pts.length; i++) {{
+    const p = pts[i];
+    if (p && p.location && sb[p.location]) return p.location;
+  }}
+  return null;
+}}
 
 /** Mouse position → lon/lat using Plotly geo subplot projection (same space as choropleth). */
 function flatMapPointerToLonLat(gd, ev) {{
@@ -2077,7 +2121,7 @@ function switchPub(pubId) {{
   if (!plotlyInited && !plotlyInitializing) {{
     plotlyInitializing = true;
     const plotInitializedFor = pubId;
-    Plotly.newPlot(mapDiv, [trace], BASE_LAYOUT, PLOTLY_CONFIG).then(() => {{
+    Plotly.newPlot(mapDiv, [trace], touchAwareMapLayout(), PLOTLY_CONFIG).then(() => {{
       // Trace 1: persistent empty highlight overlay (restyle on article hover)
       Plotly.addTraces(mapDiv, {{
         type:         'choropleth',
@@ -2122,7 +2166,8 @@ function switchPub(pubId) {{
       mapDiv.on('plotly_hover', data => {{
         if ('ontouchstart' in window) return;
         const ev = data.event;
-        const pt = data.points && data.points[0];
+        const pts = data.points || [];
+        const pt = pts.find(p => p && p.curveNumber === 0 && p.location) || pts[0];
         if (!ev || !pt) return;
         const tt = document.getElementById('map-tooltip');
         if (pt.curveNumber === 0 && pt.location === 'RUS') {{
@@ -2140,7 +2185,8 @@ function switchPub(pubId) {{
       mapDiv.on('plotly_click', data => {{
         hideTooltip();
         if (data.event) triggerClickRipple(data.event.clientX, data.event.clientY);
-        const iso3 = data.points[0].location;
+        const iso3 = pickIsoFromPlotlyClick(data);
+        if (!iso3) return;
         requestAnimationFrame(() => {{
           populateSidebar(iso3);
           playCRTClick();
@@ -2260,6 +2306,7 @@ function populateRecentPanel(pubId) {{
 function resetSidebar() {{
   const sb = document.getElementById('sidebar');
   if (sb) sb.classList.remove('drawer-open');
+  document.body.classList.remove('jf-drawer-open');
   document.getElementById('sidebar-country').textContent = 'Select a country';
   document.getElementById('sidebar-count').textContent   = '';
   document.getElementById('sidebar-articles').innerHTML  =
@@ -2378,7 +2425,13 @@ function populateSidebar(iso3) {{
     container.appendChild(card);
   }});
   const sbar = document.getElementById('sidebar');
-  if (sbar && window.matchMedia('(max-width:768px)').matches) sbar.classList.add('drawer-open');
+  const mobileSheet =
+    window.matchMedia('(max-width: 768px)').matches || window.innerWidth <= 768;
+  if (sbar && mobileSheet) {{
+    sbar.classList.add('drawer-open');
+    document.body.classList.add('jf-drawer-open');
+    void sbar.offsetWidth;
+  }}
 }}
 
 // ── Floating map overlay (created once, updated on every switch) ─────────
@@ -2941,6 +2994,7 @@ document.querySelectorAll('.pub-tab').forEach(t => {{
   if (dh) {{
     dh.addEventListener('click', () => {{
       document.getElementById('sidebar')?.classList.remove('drawer-open');
+      document.body.classList.remove('jf-drawer-open');
     }}, {{ passive: true }});
   }}
 }})();
