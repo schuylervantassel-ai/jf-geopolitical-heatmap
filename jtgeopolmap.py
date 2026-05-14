@@ -633,12 +633,42 @@ def build_html(all_data: dict, days: int) -> str:
     with open(_globe_embed_path, encoding="utf-8") as _globe_f:
         globe_d3_js = _globe_f.read()
 
+    # Touch-friendly globe: stronger drag rotation + no hover tooltip on touch devices.
+    globe_d3_js = globe_d3_js.replace(
+        "      const k = 0.28;",
+        "      const k = 0.28 * (typeof window !== 'undefined' && 'ontouchstart' in window ? 1.5 : 1);",
+        1,
+    )
+    globe_d3_js = globe_d3_js.replace(
+        "      let vx = _dragLastDx * 0.28;\n      let vy = -_dragLastDy * 0.28;",
+        "      const _jfTouchMul = (typeof window !== 'undefined' && 'ontouchstart' in window ? 1.5 : 1);\n"
+        "      let vx = _dragLastDx * 0.28 * _jfTouchMul;\n"
+        "      let vy = -_dragLastDy * 0.28 * _jfTouchMul;",
+        1,
+    )
+    globe_d3_js = globe_d3_js.replace(
+        "  svg.on('mousemove', (ev) => {",
+        "  svg.on('mousemove', (ev) => {\n    if (typeof window !== 'undefined' && 'ontouchstart' in window) return;",
+        1,
+    )
+    globe_d3_js = globe_d3_js.replace(
+        "  cvs.height = Math.max(2, Math.round(mc.clientHeight * 0.5));",
+        "  cvs.height = Math.max(2, Math.round(\n"
+        "    (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:768px)').matches)\n"
+        "      ? 120\n"
+        "      : mc.clientHeight * 0.5\n"
+        "  ));",
+        1,
+    )
+
     return (
         f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Jamestown Foundation — Geopolitical Heatmap</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -665,7 +695,8 @@ def build_html(all_data: dict, days: int) -> str:
     font-family: 'Literata', Georgia, 'Times New Roman', serif;
     background: #0d1117;
     color: #e6edf3;
-    height: 100vh;
+    min-height: 100dvh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -685,7 +716,7 @@ def build_html(all_data: dict, days: int) -> str:
   }}
   .header-top h1 {{
     font-family: 'Mazius Display', 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
-    font-size: 1.15rem;
+    font-size: clamp(0.85rem, 3vw, 1.15rem);
     font-weight: normal;
     color: #f0f6fc;
     white-space: nowrap;
@@ -711,9 +742,26 @@ def build_html(all_data: dict, days: int) -> str:
     gap: 0;
     padding: 8px 20px 0;
     align-items: flex-end;
+    flex-wrap: nowrap;
+    min-width: 0;
   }}
+  .pub-tabs-scroll {{
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    gap: 0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }}
+  .pub-tabs-scroll::-webkit-scrollbar {{ display: none; }}
   .proj-toggle {{
-    margin-left: auto;
+    margin-left: 0;
+    flex-shrink: 0;
     display: flex;
     gap: 0;
     align-items: flex-end;
@@ -1017,6 +1065,13 @@ def build_html(all_data: dict, days: int) -> str:
     align-items: center;
   }}
   #stats-bar b {{ color: #8b949e; }}
+  /* Collapsible recent list: known start state for max-height transition */
+  #recent-panel-outer {{
+    flex-shrink: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }}
   .header-meta, .hint {{
     font-family: 'Literata', Georgia, serif;
   }}
@@ -1127,6 +1182,284 @@ def build_html(all_data: dict, days: int) -> str:
   #map-tooltip.glitching {{
     animation: tt-displace 0.34s steps(1, end) forwards,
                tt-chroma   0.34s steps(1, end) forwards;
+  }}
+
+  /* ── Mobile layout (≤768px) ─────────────────────────────────────────── */
+  #recent-stories-toggle {{
+    display: none;
+  }}
+  #sidebar-drawer-handle {{
+    display: none;
+  }}
+  #sidebar-mobile-spacer {{
+    display: none;
+  }}
+  #stats-settings-btn,
+  #stats-settings-popover {{
+    display: none;
+  }}
+
+  @media (max-width: 768px) {{
+    body {{
+      overflow: hidden;
+      height: 100dvh;
+    }}
+    .hint {{ display: none !important; }}
+
+    .pub-tabs {{
+      padding: 6px 12px 0;
+      gap: 6px;
+      align-items: flex-end;
+    }}
+    .pub-tab {{
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }}
+    .proj-btn {{
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }}
+
+    .main {{
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: visible;
+    }}
+    #map-container {{
+      flex: none;
+      height: 45vh;
+      min-height: 45vh;
+      max-height: 45vh;
+      width: 100%;
+    }}
+
+    #sidebar {{
+      flex: none;
+      height: calc(55vh - 40px);
+      min-height: 80px;
+      width: 100%;
+      border-left: none;
+      border-top: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      overflow: visible;
+      position: relative;
+      isolation: auto;
+      z-index: 2;
+    }}
+    #sidebar-mobile-spacer {{
+      display: block;
+      flex: 1;
+      min-height: 24px;
+    }}
+
+    #recent-stories-toggle {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 10px 14px;
+      margin: 0;
+      font-family: 'Literata', Georgia, serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8b949e;
+      background: #161b22;
+      border: none;
+      border-bottom: 1px solid #21262d;
+      cursor: pointer;
+      flex-shrink: 0;
+      touch-action: manipulation;
+    }}
+    #recent-panel-outer {{
+      flex-shrink: 0;
+    }}
+    #recent-panel-outer.expanded {{
+      max-height: 220px;
+    }}
+    #recent-panel {{
+      height: auto;
+      max-height: 220px;
+    }}
+
+    #sidebar-drawer {{
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: min(78vh, calc(100vh - 120px));
+      max-height: calc(100dvh - 100px);
+      z-index: 5000;
+      background: #161b22;
+      border-top: 1px solid #30363d;
+      border-radius: 12px 12px 0 0;
+      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+    }}
+    #sidebar.drawer-open #sidebar-drawer {{
+      transform: translateY(0);
+    }}
+
+    #sidebar-drawer-handle {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 8px 12px 6px;
+      flex-shrink: 0;
+      font-size: 1rem;
+      line-height: 1;
+      color: #8b949e;
+      background: #1c2128;
+      border: none;
+      border-bottom: 1px solid #30363d;
+      cursor: pointer;
+      touch-action: manipulation;
+    }}
+
+    #sidebar-header {{
+      flex-shrink: 0;
+    }}
+    #sidebar-articles {{
+      flex: 1;
+      min-height: 0;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }}
+
+    .article-card {{
+      min-height: 44px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }}
+    .article-title {{
+      font-size: 0.95rem !important;
+    }}
+
+    #stats-bar {{
+      font-size: 0.62rem;
+      padding: 4px 12px;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      gap: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      align-items: center;
+    }}
+    #stats-bar > span.stat-desktop-only,
+    #stats-bar span.stat-desktop-only {{
+      display: none !important;
+    }}
+    #stats-bar > span.stats-bar-desktop-extra,
+    #stats-bar span.stats-bar-desktop-extra {{
+      display: none !important;
+    }}
+    #stats-bar > span.stat-mobile-row,
+    #stats-bar > button#stats-settings-btn {{
+      flex-shrink: 0;
+    }}
+    #stats-settings-btn {{
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      padding: 4px 8px;
+      background: none;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #8b949e;
+      font-size: 0.85rem;
+      cursor: pointer;
+      touch-action: manipulation;
+    }}
+    #stats-settings-popover {{
+      display: none;
+      position: fixed;
+      right: 10px;
+      bottom: 48px;
+      z-index: 12000;
+      min-width: 200px;
+      max-width: min(280px, calc(100vw - 20px));
+      padding: 12px 14px;
+      background: rgba(22, 27, 34, 0.98);
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+      flex-direction: column;
+      gap: 10px;
+    }}
+    #stats-settings-popover.open {{
+      display: flex !important;
+    }}
+    #stats-settings-popover .settings-row {{
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.68rem;
+      color: #8b949e;
+    }}
+    #stats-settings-popover .settings-row button {{
+      background: none;
+      border: none;
+      padding: 0;
+      color: #484f58;
+      font-size: 0.68rem;
+      cursor: pointer;
+      font-family: 'Literata', Georgia, serif;
+      touch-action: manipulation;
+    }}
+
+    #map-overlay {{
+      display: none !important;
+    }}
+
+    #jf-sound-bar {{
+      display: none !important;
+    }}
+
+    #globe-legend {{
+      top: auto;
+      right: 8px;
+      bottom: 8px;
+      left: auto;
+      transform: none;
+    }}
+
+    #globe-legend-canvas {{
+      height: 120px !important;
+    }}
+  }}
+
+  @media (min-width: 769px) {{
+    #recent-panel-outer {{
+      max-height: none !important;
+      overflow: visible !important;
+      transition: none !important;
+    }}
+    #sidebar-drawer {{
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+      transform: none !important;
+      transition: none !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      height: auto !important;
+      max-height: none !important;
+    }}
   }}
 
 </style>
@@ -1251,6 +1584,7 @@ def build_html(all_data: dict, days: int) -> str:
   }}
   document.addEventListener('keydown', onEnterKey);
   loader.addEventListener('click', dismissLoader);
+  loader.addEventListener('touchend', dismissLoader, {{ passive: true }});
 }})();
 </script>
 
@@ -1262,10 +1596,12 @@ def build_html(all_data: dict, days: int) -> str:
     <span class="hint">Click any shaded country to browse articles</span>
   </div>
   <div class="pub-tabs">
-    <div class="pub-tab" data-pub="all" onclick="switchPub('all')">All Coverage</div>
-    <div class="pub-tab" data-pub="edm" onclick="switchPub('edm')">Eurasia Daily Monitor</div>
-    <div class="pub-tab" data-pub="cb"  onclick="switchPub('cb')">China Brief</div>
-    <div class="pub-tab" data-pub="tm"  onclick="switchPub('tm')">Terrorism Monitor</div>
+    <div class="pub-tabs-scroll">
+      <div class="pub-tab" data-pub="all" onclick="switchPub('all')">All Coverage</div>
+      <div class="pub-tab" data-pub="edm" onclick="switchPub('edm')">Eurasia Daily Monitor</div>
+      <div class="pub-tab" data-pub="cb"  onclick="switchPub('cb')">China Brief</div>
+      <div class="pub-tab" data-pub="tm"  onclick="switchPub('tm')">Terrorism Monitor</div>
+    </div>
     <div class="proj-toggle">
       <div class="proj-btn active" id="proj-flat"   onclick="setProjection('robinson')">Flat</div>
       <div class="proj-btn"        id="proj-globe"  onclick="setProjection('globe')">Globe</div>
@@ -1290,38 +1626,45 @@ def build_html(all_data: dict, days: int) -> str:
     <div id="map-tooltip"></div>
   </div>
   <div id="sidebar">
-    <div id="recent-panel">
-      <div id="recent-panel-hdr">
-        <span id="recent-pub-dot"></span>
-        <span id="recent-panel-label">Most Recent Stories</span>
+    <div id="sidebar-mobile-spacer" aria-hidden="true"></div>
+    <button type="button" id="recent-stories-toggle" aria-expanded="false" aria-controls="recent-panel">Recent Stories ▾</button>
+    <div id="recent-panel-outer">
+      <div id="recent-panel">
+        <div id="recent-panel-hdr">
+          <span id="recent-pub-dot"></span>
+          <span id="recent-panel-label">Most Recent Stories</span>
+        </div>
+        <!-- populated by populateRecentPanel() -->
       </div>
-      <!-- populated by populateRecentPanel() -->
     </div>
-    <div id="sidebar-header">
-      <div id="sidebar-country">Select a country</div>
-      <div id="sidebar-count"></div>
-    </div>
-    <div id="sidebar-articles">
-      <div id="sidebar-empty">
-        <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
-          <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 8v4M12 16h.01"/>
-        </svg>
-        <div>Select a publication tab above,<br>then click a highlighted country</div>
+    <div id="sidebar-drawer">
+      <button type="button" id="sidebar-drawer-handle" aria-label="Close country panel">▼</button>
+      <div id="sidebar-header">
+        <div id="sidebar-country">Select a country</div>
+        <div id="sidebar-count"></div>
+      </div>
+      <div id="sidebar-articles">
+        <div id="sidebar-empty">
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                  d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 8v4M12 16h.01"/>
+          </svg>
+          <div>Select a publication tab above,<br>then click a highlighted country</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <div id="stats-bar">
-  <span>Source: <b id="stat-pub">—</b></span>
-  <span>Articles: <b id="stat-arts">—</b></span>
-  <span>Countries covered: <b id="stat-ctry">—</b></span>
-  <span>Generated: <b>{datetime.now().strftime("%Y-%m-%d %H:%M")}</b></span>
-  <span style="margin-left:auto"><a id="stat-link" href="#" target="_blank"
+  <span class="stat-desktop-only">Source: <b id="stat-pub">—</b></span>
+  <span class="stat-mobile-row">Articles: <b id="stat-arts">—</b></span>
+  <span class="stat-desktop-only">Countries covered: <b id="stat-ctry">—</b></span>
+  <span class="stat-mobile-row">Generated: <b id="stat-generated-date">{datetime.now().strftime("%Y-%m-%d %H:%M")}</b></span>
+  <span class="stats-bar-desktop-extra" style="margin-left:auto"><a id="stat-link" href="#" target="_blank"
     style="color:#484f58;text-decoration:none;font-size:0.68rem;">
     jamestown.org ↗</a></span>
-  <span style="margin-left:8px;">
+  <span class="stats-bar-desktop-extra" style="margin-left:8px;">
     <button id="credits-btn" onclick="showCredits()"
       style="background:none;border:none;padding:0;color:#484f58;
              text-decoration:none;font-size:0.68rem;cursor:pointer;
@@ -1329,7 +1672,7 @@ def build_html(all_data: dict, days: int) -> str:
       Credits
     </button>
   </span>
-  <span style="margin-left:8px;">
+  <span class="stats-bar-desktop-extra" style="margin-left:8px;">
     <button id="help-btn" onclick="showHelp()"
       style="background:none;border:none;padding:0;color:#484f58;
              font-size:0.68rem;cursor:pointer;
@@ -1337,7 +1680,7 @@ def build_html(all_data: dict, days: int) -> str:
       Help
     </button>
   </span>
-  <span style="margin-left:8px;">
+  <span class="stats-bar-desktop-extra" style="margin-left:8px;">
     <button id="autorefresh-btn" onclick="toggleAutoRefresh()"
       style="background:none;border:none;padding:0;color:#484f58;
              font-size:0.68rem;cursor:pointer;
@@ -1345,6 +1688,20 @@ def build_html(all_data: dict, days: int) -> str:
       Auto-refresh: Off
     </button>
   </span>
+  <button type="button" id="stats-settings-btn" onclick="toggleStatsSettings()" aria-label="Settings" aria-expanded="false" aria-haspopup="true">⚙</button>
+</div>
+<div id="stats-settings-popover" role="dialog" aria-label="Settings">
+  <div id="settings-audio-slot" class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px;"></div>
+  <div class="settings-row" style="border-top:1px solid #21262d;padding-top:8px;margin-top:2px;">
+    <a id="stat-link-mobile" href="#" target="_blank" style="color:#8b949e;text-decoration:none;font-size:0.68rem;">jamestown.org ↗</a>
+  </div>
+  <div class="settings-row" style="gap:12px;">
+    <button type="button" onclick="showCredits(); closeStatsSettings();">Credits</button>
+    <button type="button" onclick="showHelp(); closeStatsSettings();">Help</button>
+  </div>
+  <div class="settings-row">
+    <button type="button" id="autorefresh-btn-mobile" onclick="toggleAutoRefresh()">Auto-refresh: Off</button>
+  </div>
 </div>
 
 <script>
@@ -1473,7 +1830,7 @@ function isLonLatInCrimeaBox(ll) {{
 const PLOTLY_CONFIG = {{
   /* Globe uses D3, not Plotly — safe to let flat map fill its container */
   responsive:    true,
-  scrollZoom:    true,
+  scrollZoom:    !('ontouchstart' in window),
   doubleClick:   'reset',
   displaylogo:   false,
   modeBarButtonsToRemove: ['select2d', 'lasso2d'],
@@ -1686,6 +2043,11 @@ function switchPub(pubId) {{
   const lnk = document.getElementById('stat-link');
   lnk.href = meta.url;
   lnk.textContent = meta.label + ' ↗';
+  const lnkM = document.getElementById('stat-link-mobile');
+  if (lnkM) {{
+    lnkM.href = meta.url;
+    lnkM.textContent = meta.label + ' ↗';
+  }}
 
   // Populate recent stories panel
   populateRecentPanel(pubId);
@@ -1758,6 +2120,7 @@ function switchPub(pubId) {{
       }}
 
       mapDiv.on('plotly_hover', data => {{
+        if ('ontouchstart' in window) return;
         const ev = data.event;
         const pt = data.points && data.points[0];
         if (!ev || !pt) return;
@@ -1775,6 +2138,7 @@ function switchPub(pubId) {{
       }});
       mapDiv.on('plotly_unhover', () => hideTooltip());
       mapDiv.on('plotly_click', data => {{
+        hideTooltip();
         if (data.event) triggerClickRipple(data.event.clientX, data.event.clientY);
         const iso3 = data.points[0].location;
         requestAnimationFrame(() => {{
@@ -1788,6 +2152,19 @@ function switchPub(pubId) {{
 
       Plotly.Plots.resize(mapDiv);
       setTimeout(() => Plotly.Plots.resize(mapDiv), 100);
+      const mapContainerEl = document.getElementById('map-container');
+      if (mapContainerEl && typeof ResizeObserver !== 'undefined') {{
+        let _plotlyRoDone = false;
+        const _plotlyRo = new ResizeObserver(() => {{
+          if (_plotlyRoDone) return;
+          _plotlyRoDone = true;
+          try {{ Plotly.Plots.resize(mapDiv); }} catch (_) {{}}
+          _plotlyRo.disconnect();
+        }});
+        requestAnimationFrame(() => {{
+          requestAnimationFrame(() => {{ _plotlyRo.observe(mapContainerEl); }});
+        }});
+      }}
       let _resizeRaf = null;
       window.addEventListener('resize', () => {{
         if (_resizeRaf) return;
@@ -1881,6 +2258,8 @@ function populateRecentPanel(pubId) {{
 }}
 
 function resetSidebar() {{
+  const sb = document.getElementById('sidebar');
+  if (sb) sb.classList.remove('drawer-open');
   document.getElementById('sidebar-country').textContent = 'Select a country';
   document.getElementById('sidebar-count').textContent   = '';
   document.getElementById('sidebar-articles').innerHTML  =
@@ -1998,6 +2377,8 @@ function populateSidebar(iso3) {{
 
     container.appendChild(card);
   }});
+  const sbar = document.getElementById('sidebar');
+  if (sbar && window.matchMedia('(max-width:768px)').matches) sbar.classList.add('drawer-open');
 }}
 
 // ── Floating map overlay (created once, updated on every switch) ─────────
@@ -2015,6 +2396,7 @@ overlay.style.cssText = `
 
 // ── Sound controls bar (mute toggle + volume slider) ─────────────────────
 const soundBar = document.createElement('div');
+soundBar.id = 'jf-sound-bar';
 soundBar.style.cssText = `
   position: absolute; bottom: 16px; left: 16px;
   display: flex; align-items: center; gap: 8px;
@@ -2062,6 +2444,41 @@ soundBar.appendChild(soundBtn);
 soundBar.appendChild(volSlider);
 document.getElementById('map-container').appendChild(soundBar);
 document.getElementById('map-container').appendChild(overlay);
+
+function closeStatsSettings() {{
+  const p = document.getElementById('stats-settings-popover');
+  const b = document.getElementById('stats-settings-btn');
+  if (p) p.classList.remove('open');
+  if (b) b.setAttribute('aria-expanded', 'false');
+}}
+function toggleStatsSettings() {{
+  const p = document.getElementById('stats-settings-popover');
+  const b = document.getElementById('stats-settings-btn');
+  if (!p || !b) return;
+  const on = p.classList.toggle('open');
+  b.setAttribute('aria-expanded', on ? 'true' : 'false');
+}}
+
+function placeSoundBar() {{
+  const mobile = window.matchMedia('(max-width:768px)').matches;
+  const bar = document.getElementById('jf-sound-bar');
+  const slotMap = document.getElementById('map-container');
+  const slotPop = document.getElementById('settings-audio-slot');
+  if (!bar || !slotMap) return;
+  const dest = mobile && slotPop ? slotPop : slotMap;
+  if (bar.parentElement !== dest) dest.appendChild(bar);
+  if (!mobile) closeStatsSettings();
+}}
+placeSoundBar();
+window.addEventListener('resize', () => {{ requestAnimationFrame(placeSoundBar); }}, {{ passive: true }});
+
+document.addEventListener('click', (e) => {{
+  const p = document.getElementById('stats-settings-popover');
+  const btn = document.getElementById('stats-settings-btn');
+  if (!p || !btn || !p.classList.contains('open')) return;
+  if (p.contains(e.target) || btn.contains(e.target)) return;
+  closeStatsSettings();
+}});
 
 function updateOverlay(pubId) {{
   const meta    = PUB_META[pubId];
@@ -2509,6 +2926,24 @@ document.addEventListener('wheel',   () => {{ if (typeof startAmbient === 'funct
 document.querySelectorAll('.pub-tab').forEach(t => {{
   t.style.setProperty('--accent', PUB_META[t.dataset.pub].accent);
 }});
+(function() {{
+  const btn = document.getElementById('recent-stories-toggle');
+  const outer = document.getElementById('recent-panel-outer');
+  if (!btn || !outer) return;
+  btn.addEventListener('click', () => {{
+    const ex = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', ex ? 'false' : 'true');
+    const now = btn.getAttribute('aria-expanded') === 'true';
+    outer.classList.toggle('expanded', now);
+    btn.textContent = now ? 'Recent Stories ▴' : 'Recent Stories ▾';
+  }}, {{ passive: true }});
+  const dh = document.getElementById('sidebar-drawer-handle');
+  if (dh) {{
+    dh.addEventListener('click', () => {{
+      document.getElementById('sidebar')?.classList.remove('drawer-open');
+    }}, {{ passive: true }});
+  }}
+}})();
 switchPub('all');
 
 // ── Fuzzy grain texture for #fuzzy-overlay ───────────────────────────────
@@ -2545,16 +2980,16 @@ switchPub('all');
   }}
 
   function updateBtn() {{
-    const btn = document.getElementById('autorefresh-btn');
-    if (!btn) return;
-    if (refreshTimer) {{
-      const remaining = reloadAt - Date.now();
-      btn.textContent = 'Auto-refresh: ' + fmt(remaining);
-      btn.style.color = '#3fb950';
-    }} else {{
-      btn.textContent = 'Auto-refresh: Off';
-      btn.style.color = '#484f58';
-    }}
+    const label = refreshTimer
+      ? 'Auto-refresh: ' + fmt(reloadAt - Date.now())
+      : 'Auto-refresh: Off';
+    const col = refreshTimer ? '#3fb950' : '#484f58';
+    ['autorefresh-btn', 'autorefresh-btn-mobile'].forEach(id => {{
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.textContent = label;
+      btn.style.color = col;
+    }});
   }}
 
   function startAutoRefresh() {{
