@@ -941,7 +941,6 @@ def build_html(all_data: dict, days: int) -> str:
     flex-shrink: 0;
     height: 195px;
     overflow-y: auto;
-    touch-action: pan-y;
     border-bottom: 2px solid #30363d;
     scrollbar-width: thin;
     scrollbar-color: #30363d #161b22;
@@ -1257,11 +1256,14 @@ def build_html(all_data: dict, days: int) -> str:
     }}
     #map-container {{
       flex: none;
-      height: 52vh;
-      min-height: 52vh;
-      max-height: 52vh;
+      height: 48vh;
+      min-height: 48vh;
+      max-height: 48vh;
       width: 100%;
-      touch-action: pinch-zoom pan-x pan-y;
+      touch-action: auto;
+    }}
+    #plotly-map {{
+      touch-action: auto;
     }}
 
     #sidebar {{
@@ -1281,7 +1283,7 @@ def build_html(all_data: dict, days: int) -> str:
       align-items: center;
       justify-content: center;
       width: 100%;
-      padding: 7px 14px;
+      padding: 6px 14px;
       margin: 0;
       font-family: 'Literata', Georgia, serif;
       font-size: 0.72rem;
@@ -1305,7 +1307,6 @@ def build_html(all_data: dict, days: int) -> str:
     #recent-panel {{
       height: auto;
       max-height: 220px;
-      touch-action: pan-y;
       -webkit-overflow-scrolling: touch;
     }}
 
@@ -1333,11 +1334,11 @@ def build_html(all_data: dict, days: int) -> str:
 
     #sidebar-header {{
       flex-shrink: 0;
-      padding: 8px 16px 6px;
+      padding: 7px 16px 5px;
     }}
     #sidebar-articles {{
       flex: 1;
-      min-height: 80px;
+      min-height: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
@@ -1357,7 +1358,7 @@ def build_html(all_data: dict, days: int) -> str:
       bottom: 0;
       z-index: 20;
       flex-shrink: 0;
-      min-height: 32px;
+      min-height: 28px;
       font-size: 0.62rem;
       padding: 3px 12px;
       flex-wrap: nowrap;
