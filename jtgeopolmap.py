@@ -672,7 +672,7 @@ def build_html(all_data: dict, days: int) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Jamestown Foundation — Geopolitical Heatmap</title>
@@ -698,8 +698,8 @@ def build_html(all_data: dict, days: int) -> str:
 
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   html {{
-    touch-action: none;
     overflow: hidden;
+    overscroll-behavior: none;
     height: 100%;
   }}
   body {{
@@ -711,7 +711,7 @@ def build_html(all_data: dict, days: int) -> str:
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    touch-action: none;
+    overscroll-behavior: none;
   }}
 
   /* ── Header ── */
@@ -782,6 +782,7 @@ def build_html(all_data: dict, days: int) -> str:
   }}
   .proj-btn {{
     padding: 7px 18px;
+    touch-action: manipulation;
     font-family: 'Mazius Display', 'Palatino Linotype', Palatino, serif;
     font-size: 0.78rem;
     cursor: pointer;
@@ -803,6 +804,7 @@ def build_html(all_data: dict, days: int) -> str:
   }}
   .pub-tab {{
     padding: 9px 24px;
+    touch-action: manipulation;
     font-family: 'Mazius Display', 'Palatino Linotype', Palatino, serif;
     font-size: 0.88rem;
     font-weight: 600;
@@ -939,6 +941,7 @@ def build_html(all_data: dict, days: int) -> str:
     flex-shrink: 0;
     height: 195px;
     overflow-y: auto;
+    touch-action: pan-y;
     border-bottom: 2px solid #30363d;
     scrollbar-width: thin;
     scrollbar-color: #30363d #161b22;
@@ -1016,6 +1019,7 @@ def build_html(all_data: dict, days: int) -> str:
     flex: 1;
     min-height: 0;
     padding: 8px 0;
+    touch-action: pan-y;
   }}
   .article-card {{
     display: block;
@@ -1217,6 +1221,7 @@ def build_html(all_data: dict, days: int) -> str:
     }}
     body {{
       overflow: hidden;
+      overscroll-behavior: none;
       height: 100dvh;
     }}
     .hint {{ display: none !important; }}
@@ -1229,15 +1234,18 @@ def build_html(all_data: dict, days: int) -> str:
     .pub-tabs-scroll {{
       -webkit-overflow-scrolling: touch;
       overscroll-behavior-x: contain;
+      touch-action: pan-x;
     }}
     .pub-tab {{
       padding: 6px 12px;
       font-size: 0.75rem;
       flex-shrink: 0;
+      touch-action: manipulation;
     }}
     .proj-btn {{
       padding: 6px 12px;
       font-size: 0.75rem;
+      touch-action: manipulation;
     }}
 
     .main {{
@@ -1249,11 +1257,11 @@ def build_html(all_data: dict, days: int) -> str:
     }}
     #map-container {{
       flex: none;
-      height: 58vh;
-      min-height: 58vh;
-      max-height: 58vh;
+      height: 52vh;
+      min-height: 52vh;
+      max-height: 52vh;
       width: 100%;
-      touch-action: pan-x pan-y;
+      touch-action: pinch-zoom pan-x pan-y;
     }}
 
     #sidebar {{
@@ -1273,7 +1281,7 @@ def build_html(all_data: dict, days: int) -> str:
       align-items: center;
       justify-content: center;
       width: 100%;
-      padding: 10px 14px;
+      padding: 7px 14px;
       margin: 0;
       font-family: 'Literata', Georgia, serif;
       font-size: 0.72rem;
@@ -1297,6 +1305,8 @@ def build_html(all_data: dict, days: int) -> str:
     #recent-panel {{
       height: auto;
       max-height: 220px;
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
     }}
 
     #sidebar-drawer {{
@@ -1323,10 +1333,12 @@ def build_html(all_data: dict, days: int) -> str:
 
     #sidebar-header {{
       flex-shrink: 0;
+      padding: 8px 16px 6px;
     }}
     #sidebar-articles {{
       flex: 1;
-      min-height: 0;
+      min-height: 80px;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
     }}
@@ -1345,9 +1357,9 @@ def build_html(all_data: dict, days: int) -> str:
       bottom: 0;
       z-index: 20;
       flex-shrink: 0;
-      min-height: 40px;
+      min-height: 32px;
       font-size: 0.62rem;
-      padding: 4px 12px;
+      padding: 3px 12px;
       flex-wrap: nowrap;
       white-space: nowrap;
       gap: 10px;
@@ -1857,7 +1869,7 @@ function isLonLatInCrimeaBox(ll) {{
 const PLOTLY_CONFIG = {{
   /* Globe uses D3, not Plotly — safe to let flat map fill its container */
   responsive:    true,
-  scrollZoom:    !('ontouchstart' in window),
+  scrollZoom:    true,
   doubleClick:   'reset',
   displaylogo:   false,
   modeBarButtonsToRemove: ['select2d', 'lasso2d'],
