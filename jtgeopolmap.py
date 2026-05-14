@@ -672,7 +672,7 @@ def build_html(all_data: dict, days: int) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0d1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Jamestown Foundation — Geopolitical Heatmap</title>
@@ -697,6 +697,11 @@ def build_html(all_data: dict, days: int) -> str:
   }}
 
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  html {{
+    touch-action: none;
+    overflow: hidden;
+    height: 100%;
+  }}
   body {{
     font-family: 'Literata', Georgia, 'Times New Roman', serif;
     background: #0d1117;
@@ -706,6 +711,7 @@ def build_html(all_data: dict, days: int) -> str:
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    touch-action: none;
   }}
 
   /* ── Header ── */
@@ -762,6 +768,7 @@ def build_html(all_data: dict, days: int) -> str:
     gap: 0;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
     touch-action: pan-x;
   }}
   .pub-tabs-scroll::-webkit-scrollbar {{ display: none; }}
@@ -1065,7 +1072,10 @@ def build_html(all_data: dict, days: int) -> str:
     padding: 5px 20px;
     font-size: 0.7rem;
     color: #484f58;
+    position: relative;
+    z-index: 10;
     flex-shrink: 0;
+    min-height: 36px;
     display: flex;
     gap: 18px;
     align-items: center;
@@ -1194,18 +1204,17 @@ def build_html(all_data: dict, days: int) -> str:
   #recent-stories-toggle {{
     display: none;
   }}
-  #sidebar-drawer-handle {{
-    display: none;
-  }}
-  #sidebar-mobile-spacer {{
-    display: none;
-  }}
   #stats-settings-btn,
   #stats-settings-popover {{
     display: none;
   }}
 
   @media (max-width: 768px) {{
+    header {{
+      flex-shrink: 0;
+      overflow: hidden;
+      min-width: 0;
+    }}
     body {{
       overflow: hidden;
       height: 100dvh;
@@ -1216,6 +1225,10 @@ def build_html(all_data: dict, days: int) -> str:
       padding: 6px 12px 0;
       gap: 6px;
       align-items: flex-end;
+    }}
+    .pub-tabs-scroll {{
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
     }}
     .pub-tab {{
       padding: 6px 12px;
@@ -1231,36 +1244,28 @@ def build_html(all_data: dict, days: int) -> str:
       flex-direction: column;
       flex: 1;
       min-height: 0;
+      overflow: hidden;
       position: relative;
-      overflow: visible;
     }}
     #map-container {{
       flex: none;
-      height: 45vh;
-      min-height: 45vh;
-      max-height: 45vh;
+      height: 58vh;
+      min-height: 58vh;
+      max-height: 58vh;
       width: 100%;
-      touch-action: manipulation;
+      touch-action: pan-x pan-y;
     }}
 
     #sidebar {{
-      flex: none;
-      height: calc(55vh - 40px);
-      min-height: 80px;
+      flex: 1;
+      min-height: 0;
       width: 100%;
       border-left: none;
       border-top: 1px solid #30363d;
       display: flex;
       flex-direction: column;
-      overflow: visible;
+      overflow: hidden;
       position: relative;
-      isolation: auto;
-      z-index: 2;
-    }}
-    #sidebar-mobile-spacer {{
-      display: block;
-      flex: 1;
-      min-height: 24px;
     }}
 
     #recent-stories-toggle {{
@@ -1294,49 +1299,26 @@ def build_html(all_data: dict, days: int) -> str:
       max-height: 220px;
     }}
 
-    /* Viewport-fixed sheet: avoids clipping from flex ancestors; sits above stats bar */
     #sidebar-drawer {{
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: calc(40px + env(safe-area-inset-bottom, 0px));
-      height: min(78dvh, calc(100dvh - 45vh - 52px));
-      max-height: calc(100dvh - 45vh - 52px);
-      z-index: 10060;
-      background: #161b22;
-      border-top: 1px solid #30363d;
-      border-radius: 12px 12px 0 0;
-      box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.55);
+      position: relative;
+      transform: none !important;
+      transition: none !important;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      transform: translate3d(0, 100%, 0);
-      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      min-height: 0;
       overflow: hidden;
-      pointer-events: none;
-      -webkit-transform: translate3d(0, 100%, 0);
-    }}
-    #sidebar.drawer-open #sidebar-drawer,
-    body.jf-drawer-open #sidebar-drawer {{
-      transform: translate3d(0, 0, 0);
-      -webkit-transform: translate3d(0, 0, 0);
+      border-radius: 0;
+      box-shadow: none;
       pointer-events: auto;
-    }}
-
-    #sidebar-drawer-handle {{
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      padding: 8px 12px 6px;
-      flex-shrink: 0;
-      font-size: 1rem;
-      line-height: 1;
-      color: #8b949e;
-      background: #1c2128;
-      border: none;
-      border-bottom: 1px solid #30363d;
-      cursor: pointer;
-      touch-action: manipulation;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      height: auto !important;
+      max-height: none !important;
+      z-index: auto;
+      background: #161b22;
+      border-top: none;
     }}
 
     #sidebar-header {{
@@ -1359,8 +1341,11 @@ def build_html(all_data: dict, days: int) -> str:
     }}
 
     #stats-bar {{
-      position: relative;
-      z-index: 5;
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+      flex-shrink: 0;
+      min-height: 40px;
       font-size: 0.62rem;
       padding: 4px 12px;
       flex-wrap: nowrap;
@@ -1641,7 +1626,6 @@ def build_html(all_data: dict, days: int) -> str:
     <div id="map-tooltip"></div>
   </div>
   <div id="sidebar">
-    <div id="sidebar-mobile-spacer" aria-hidden="true"></div>
     <button type="button" id="recent-stories-toggle" aria-expanded="false" aria-controls="recent-panel">Recent Stories ▾</button>
     <div id="recent-panel-outer">
       <div id="recent-panel">
@@ -1653,7 +1637,6 @@ def build_html(all_data: dict, days: int) -> str:
       </div>
     </div>
     <div id="sidebar-drawer">
-      <button type="button" id="sidebar-drawer-handle" aria-label="Close country panel">▼</button>
       <div id="sidebar-header">
         <div id="sidebar-country">Select a country</div>
         <div id="sidebar-count"></div>
@@ -2198,6 +2181,7 @@ function switchPub(pubId) {{
 
       Plotly.Plots.resize(mapDiv);
       setTimeout(() => Plotly.Plots.resize(mapDiv), 100);
+      setTimeout(() => {{ try {{ Plotly.Plots.resize(mapDiv); }} catch (_) {{}} }}, 400);
       const mapContainerEl = document.getElementById('map-container');
       if (mapContainerEl && typeof ResizeObserver !== 'undefined') {{
         let _plotlyRoDone = false;
@@ -2304,9 +2288,6 @@ function populateRecentPanel(pubId) {{
 }}
 
 function resetSidebar() {{
-  const sb = document.getElementById('sidebar');
-  if (sb) sb.classList.remove('drawer-open');
-  document.body.classList.remove('jf-drawer-open');
   document.getElementById('sidebar-country').textContent = 'Select a country';
   document.getElementById('sidebar-count').textContent   = '';
   document.getElementById('sidebar-articles').innerHTML  =
@@ -2424,13 +2405,12 @@ function populateSidebar(iso3) {{
 
     container.appendChild(card);
   }});
-  const sbar = document.getElementById('sidebar');
-  const mobileSheet =
+  const mobilePanel =
     window.matchMedia('(max-width: 768px)').matches || window.innerWidth <= 768;
-  if (sbar && mobileSheet) {{
-    sbar.classList.add('drawer-open');
-    document.body.classList.add('jf-drawer-open');
-    void sbar.offsetWidth;
+  if (mobilePanel) {{
+    requestAnimationFrame(() => {{
+      document.getElementById('sidebar-header')?.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
+    }});
   }}
 }}
 
@@ -2990,13 +2970,6 @@ document.querySelectorAll('.pub-tab').forEach(t => {{
     outer.classList.toggle('expanded', now);
     btn.textContent = now ? 'Recent Stories ▴' : 'Recent Stories ▾';
   }}, {{ passive: true }});
-  const dh = document.getElementById('sidebar-drawer-handle');
-  if (dh) {{
-    dh.addEventListener('click', () => {{
-      document.getElementById('sidebar')?.classList.remove('drawer-open');
-      document.body.classList.remove('jf-drawer-open');
-    }}, {{ passive: true }});
-  }}
 }})();
 switchPub('all');
 
