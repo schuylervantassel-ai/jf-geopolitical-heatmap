@@ -1245,6 +1245,9 @@ def build_html(all_data: dict, days: int) -> str:
       font-size: 0.75rem;
       touch-action: manipulation;
     }}
+    .proj-toggle {{
+      display: none !important;
+    }}
 
     .main {{
       flex-direction: column;
@@ -2214,6 +2217,11 @@ function switchPub(pubId) {{
           else Plotly.Plots.resize(mapDiv);
         }});
       }});
+      try {{
+        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:768px)').matches) {{
+          setProjection('globe');
+        }}
+      }} catch (_) {{}}
     }}).catch((err) => {{
       console.error('[plotly]', err);
       plotlyInitializing = false;
@@ -2981,6 +2989,19 @@ document.querySelectorAll('.pub-tab').forEach(t => {{
     btn.textContent = now ? 'Recent Stories ▴' : 'Recent Stories ▾';
   }}, {{ passive: true }});
 }})();
+(function() {{
+  if (typeof window === 'undefined' || !window.matchMedia) return;
+  const mq = window.matchMedia('(max-width:768px)');
+  function onViewportGlobe() {{
+    if (!mq.matches || typeof setProjection !== 'function' || !plotlyInited) return;
+    try {{ setProjection('globe'); }} catch (_) {{}}
+  }}
+  if (typeof mq.addEventListener === 'function') {{
+    mq.addEventListener('change', onViewportGlobe);
+  }} else if (typeof mq.addListener === 'function') {{
+    mq.addListener(onViewportGlobe);
+  }}
+}})();
 switchPub('all');
 
 // ── Fuzzy grain texture for #fuzzy-overlay ───────────────────────────────
@@ -3105,8 +3126,9 @@ switchPub('all');
       <div><span style="color:#f0f6fc;">🗺 Navigate the map</span><br>
         Click and drag to pan. Use the scroll wheel to zoom in and out.</div>
       <div><span style="color:#f0f6fc;">🌍 Switch projections</span><br>
-        Toggle between Flat and Globe views using the buttons in the top right.
-        On the globe, drag to rotate and scroll to zoom.</div>
+        On wider screens, use the Flat / Globe buttons in the top right. On phones
+        and narrow screens only the globe is shown; drag to rotate and pinch or
+        scroll to zoom.</div>
       <div><span style="color:#f0f6fc;">🔵 Click a country</span><br>
         Click any shaded country to open a list of articles mentioning it
         in the sidebar. Darker shading means more coverage.</div>

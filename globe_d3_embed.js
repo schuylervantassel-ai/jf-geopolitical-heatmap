@@ -1,6 +1,15 @@
 // ── Projection toggle ─────────────────────────────────────────────────────
 let currentProjection = 'robinson';
 
+/** Same breakpoint as `jtgeopolmap` CSS — mobile shows globe only (no flat map). */
+function isMobileGlobeOnly() {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(max-width:768px)').matches
+  );
+}
+
 /** D3 geoOrthographic.rotate([λ, φ, γ]) — never touched by Plotly */
 let globeRotation = [-20, 0, 0];
 let globeZoom = 1;
@@ -889,6 +898,7 @@ function redrawGlobeChoropleth() {
 }
 
 function setProjection(proj) {
+  if (isMobileGlobeOnly() && proj !== 'globe') return;
   if (!plotlyInited || proj === currentProjection) return;
   if (currentProjection === 'globe' && proj !== 'globe') {
     cancelGlobeMotion();
