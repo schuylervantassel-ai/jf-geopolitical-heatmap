@@ -97,6 +97,7 @@ const GLOBE_PP_HINT = 'Press Space to pause animation';
 function syncGlobePlayPauseButton() {
   if (!ppLabel || !ppGlyphPlay || !ppGlyphPause || !ppIcon || !globePlayPauseBtn) return;
   const paused = autoRotatePaused || clickPaused;
+  const mobile = isMobileGlobeOnly();
   if (paused) {
     ppIcon.style.display = 'block';
     ppGlyphPlay.style.display = 'flex';
@@ -112,8 +113,32 @@ function syncGlobePlayPauseButton() {
     ppIcon.style.minWidth = '96px';
     ppIcon.style.height = '64px';
     ppGlyphPlay.style.fontSize = '2rem';
-    globePlayPauseBtn.title = 'Click or press Space to resume';
-    globePlayPauseBtn.setAttribute('aria-label', 'Globe rotation paused. Click or press Space to resume.');
+    globePlayPauseBtn.title = mobile ? 'Tap to resume rotation' : 'Click or press Space to resume';
+    globePlayPauseBtn.setAttribute(
+      'aria-label',
+      mobile
+        ? 'Globe rotation paused. Tap to resume.'
+        : 'Globe rotation paused. Click or press Space to resume.'
+    );
+    globePlayPauseBtn.style.pointerEvents = 'auto';
+    globePlayPauseBtn.style.cursor = 'pointer';
+  } else if (mobile) {
+    ppIcon.style.display = 'block';
+    ppGlyphPlay.style.display = 'none';
+    ppGlyphPause.style.display = 'flex';
+    ppLabel.textContent = 'PAUSE';
+    ppLabel.style.fontSize = '0.62rem';
+    ppLabel.style.letterSpacing = '0.10em';
+    ppLabel.style.textTransform = 'uppercase';
+    ppLabel.style.maxWidth = 'none';
+    ppLabel.style.lineHeight = '1.2';
+    ppLabel.style.color = '#8b949e';
+    ppIcon.style.width = '96px';
+    ppIcon.style.minWidth = '96px';
+    ppIcon.style.height = '64px';
+    ppGlyphPause.style.fontSize = '2rem';
+    globePlayPauseBtn.title = 'Pause globe rotation';
+    globePlayPauseBtn.setAttribute('aria-label', 'Pause globe auto-rotation');
     globePlayPauseBtn.style.pointerEvents = 'auto';
     globePlayPauseBtn.style.cursor = 'pointer';
   } else {
@@ -316,19 +341,26 @@ if (typeof document !== 'undefined') {
     _mapCont.appendChild(globePlayPauseBtn);
 
     globePlayPauseBtn.addEventListener('click', (ev) => {
-      if (!autoRotatePaused && !clickPaused) return;
       ev.preventDefault();
-      resumeGlobeAutoRotation();
+      if (autoRotatePaused || clickPaused) {
+        resumeGlobeAutoRotation();
+        return;
+      }
+      if (isMobileGlobeOnly()) {
+        toggleGlobeRotation();
+      }
     });
 
     globePlayPauseBtn.addEventListener('mouseenter', () => {
-      if (!autoRotatePaused && !clickPaused) return;
+      const paused = autoRotatePaused || clickPaused;
+      if (!paused && !isMobileGlobeOnly()) return;
       ppIcon.style.borderColor = '#8b949e';
       ppLabel.style.color = '#c9d1d9';
       ppIcon.style.color = '#c9d1d9';
     });
     globePlayPauseBtn.addEventListener('mouseleave', () => {
-      if (!autoRotatePaused && !clickPaused) return;
+      const paused = autoRotatePaused || clickPaused;
+      if (!paused && !isMobileGlobeOnly()) return;
       ppIcon.style.borderColor = '#30363d';
       ppLabel.style.color = '#8b949e';
       ppIcon.style.color = '#484f58';

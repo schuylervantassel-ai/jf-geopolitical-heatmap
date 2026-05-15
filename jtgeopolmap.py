@@ -1453,6 +1453,10 @@ def build_html(all_data: dict, days: int) -> str:
     #globe-legend-canvas {{
       height: 120px !important;
     }}
+
+    #globe-playpause {{
+      touch-action: manipulation;
+    }}
   }}
 
   @media (min-width: 769px) {{
@@ -2213,7 +2217,10 @@ function switchPub(pubId) {{
         if (_resizeRaf) return;
         _resizeRaf = requestAnimationFrame(() => {{
           _resizeRaf = null;
-          if (currentProjection === 'globe') resizeGlobe();
+          if (currentProjection === 'globe') {{
+            resizeGlobe();
+            try {{ if (typeof syncGlobePlayPauseButton === 'function') syncGlobePlayPauseButton(); }} catch (_) {{}}
+          }}
           else Plotly.Plots.resize(mapDiv);
         }});
       }});
@@ -2995,6 +3002,7 @@ document.querySelectorAll('.pub-tab').forEach(t => {{
   function onViewportGlobe() {{
     if (!mq.matches || typeof setProjection !== 'function' || !plotlyInited) return;
     try {{ setProjection('globe'); }} catch (_) {{}}
+    try {{ if (typeof syncGlobePlayPauseButton === 'function') syncGlobePlayPauseButton(); }} catch (_) {{}}
   }}
   if (typeof mq.addEventListener === 'function') {{
     mq.addEventListener('change', onViewportGlobe);
@@ -3141,7 +3149,8 @@ switchPub('all');
         Use the tabs at the top to switch between All Coverage, Eurasia
         Daily Monitor, China Brief, and Terrorism Monitor.</div>
       <div><span style="color:#f0f6fc;">⏸ Globe auto-rotation</span><br>
-        The globe rotates automatically. Press Space to pause and resume.
+        The globe rotates automatically. On a phone or tablet, tap Pause (bottom-left of the map)
+        to stop and start rotation. With a keyboard, press Space to pause and resume.
         Drag hard in either direction to flip the rotation direction.</div>
       <div><span style="color:#f0f6fc;">🎧 Sound</span><br>
         Interactive sounds respond to your actions. Use the volume slider
