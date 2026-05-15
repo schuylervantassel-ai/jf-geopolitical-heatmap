@@ -662,8 +662,7 @@ def build_html(all_data: dict, days: int) -> str:
     )
     globe_d3_js = globe_d3_js.replace(
         "    const relBase = {\n      dragmode: 'zoom',",
-        "    const relBase = {\n"
-        "      dragmode: (typeof window !== 'undefined' && 'ontouchstart' in window ? false : 'zoom'),",
+        "    const relBase = {\n      dragmode: 'pan',",
         1,
     )
 
@@ -1785,7 +1784,8 @@ const BASE_LAYOUT = {{
   plot_bgcolor:  '#0d1117',
   /* Right margin matches HTML legend (#globe-legend) inset from map edge */
   margin:        {{ t: 4, b: 4, l: 8, r: 16 }},
-  dragmode:      'zoom',
+  /* Geo subplot: Plotly only wires d3 zoom (wheel + pinch) when dragmode is 'pan'. */
+  dragmode:      'pan',
   font: {{
     family: "'Literata', Georgia, 'Times New Roman', serif",
     color:  '#f0f6fc',
@@ -1803,10 +1803,7 @@ const BASE_LAYOUT = {{
 
 function touchAwareMapLayout() {{
   try {{
-    const L = JSON.parse(JSON.stringify(BASE_LAYOUT));
-    /* Touch + geo: zoom dragmode often eats single-finger taps before plotly_click fires */
-    if (typeof window !== 'undefined' && 'ontouchstart' in window) L.dragmode = false;
-    return L;
+    return JSON.parse(JSON.stringify(BASE_LAYOUT));
   }} catch (_) {{
     return BASE_LAYOUT;
   }}
